@@ -47,6 +47,8 @@ dependencies:
   provider: ^3.2.0
   local_auth: ^0.6.1
   toast: ^0.1.5
+  flutter_widget_from_html: ^0.3.2
+  flutter_staggered_animations: "^0.1.2"
 
 dev_dependencies:
   flutter_test:

@@ -85,11 +85,11 @@ class _OverViewOrderState extends State<OverViewOrder> {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      SvgPicture.asset(serviceList[index].icon,
-                          allowDrawingOutsideViewBox: true,
-                          height: 30,
-                          width: 30,
-                          color: Color(0xff170e50)),
+//                      SvgPicture.asset(serviceList[index].icon,
+//                          allowDrawingOutsideViewBox: true,
+//                          height: 30,
+//                          width: 30,
+//                          color: Color(0xff170e50)),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
@@ -101,7 +101,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
                                   fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              serviceList[index].price,
+                              serviceList[index].suv_price,
                               style: TextStyle(fontSize: 13),
                             )
                           ],

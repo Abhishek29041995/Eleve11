@@ -4,15 +4,18 @@ import 'dart:typed_data';
 
 import 'dart:ui' as ui;
 import 'package:eleve11/add_location.dart';
+import 'package:eleve11/add_rides.dart';
 import 'package:eleve11/application.dart';
 import 'package:eleve11/booking_history.dart';
 import 'package:eleve11/checkOrderHistory.dart';
 import 'package:eleve11/feedback.dart';
 import 'package:eleve11/login.dart';
+import 'package:eleve11/modal/Rides.dart';
 import 'package:eleve11/modal/locale.dart';
 import 'package:eleve11/modal/service_new.dart';
 import 'package:eleve11/profile_design.dart';
 import 'package:eleve11/select_service.dart';
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/custom_radio.dart';
 import 'package:eleve11/offers_page.dart';
@@ -26,6 +29,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart';
 import 'package:location/location.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +44,7 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPage extends State<LandingPage> {
   int currentIndex = 0;
+  String acccessToken = "";
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   Completer<GoogleMapController> _controller = Completer();
   LocationData currentLocation;
@@ -71,10 +76,13 @@ class _LandingPage extends State<LandingPage> {
   double _fabHeight;
   bool showfooter = true;
   List<Services> services = new List();
+  List<Rides> myRides = new List();
   ui.Image labelIcon;
   ui.Image markerImage;
   String locationTitle = "";
   Map userData = null;
+
+  String selectedServiceCat = "";
 
   Future _getLocation() async {
     try {
@@ -101,7 +109,6 @@ class _LandingPage extends State<LandingPage> {
   Future initState() {
     checkIsLogin();
     _fabHeight = _initFabHeight;
-    services = getServices();
     _getLocation();
     setIcons();
     setRadioItems();
@@ -115,7 +122,9 @@ class _LandingPage extends State<LandingPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     JsonCodec codec = new JsonCodec();
     userData = codec.decode(prefs.getString("userData"));
-    print(userData);
+    acccessToken = prefs.getString("accessToken");
+    getServices();
+    getMyRides();
   }
 
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
@@ -203,15 +212,15 @@ class _LandingPage extends State<LandingPage> {
     textPainter.paint(canvas, offset);
   }
 
-  void paintImage(ui.Image image, Rect outputRect, Canvas canvas, Paint paint,
-      BoxFit fit) {
+  void paintImage(
+      ui.Image image, Rect outputRect, Canvas canvas, Paint paint, BoxFit fit) {
     final Size imageSize =
-    Size(image.width.toDouble(), image.height.toDouble());
+        Size(image.width.toDouble(), image.height.toDouble());
     final FittedSizes sizes = applyBoxFit(fit, imageSize, outputRect.size);
     final Rect inputSubrect =
-    Alignment.center.inscribe(sizes.source, Offset.zero & imageSize);
+        Alignment.center.inscribe(sizes.source, Offset.zero & imageSize);
     final Rect outputSubrect =
-    Alignment.center.inscribe(sizes.destination, outputRect);
+        Alignment.center.inscribe(sizes.destination, outputRect);
     canvas.drawImageRect(image, inputSubrect, outputSubrect, paint);
   }
 
@@ -227,213 +236,230 @@ class _LandingPage extends State<LandingPage> {
       child: Scaffold(
         key: _scaffoldKey,
         drawer: Drawer(
-          child: userData!=null?ListView(
-            children: <Widget>[
-              prefix1.UserAccountsDrawerHeader(
-                accountName: Text(
-                  userData['name'],
-                  style: TextStyle(fontSize: 11, color: Color(0xff170e50)),
-                ),
-                accountEmail: Text(
-                  userData['email'],
-                  style: TextStyle(fontSize: 11, color: Color(0xff170e50)),
-                ),
-                currentAccountPicture: CircleAvatar(
-                  backgroundColor:
-                  Theme
-                      .of(context)
-                      .platform == TargetPlatform.iOS
-                      ? Colors.blue
-                      : Colors.white,
-                  child: new ClipRRect(
-                    borderRadius: new BorderRadius.circular(100),
-                    child: Stack(
-                      children: <Widget>[
-                        GestureDetector(
-                          onTap: () {
+          child: userData != null
+              ? ListView(
+                  children: <Widget>[
+                    prefix1.UserAccountsDrawerHeader(
+                      accountName: Text(
+                        userData['name'],
+                        style:
+                            TextStyle(fontSize: 11, color: Color(0xff170e50)),
+                      ),
+                      accountEmail: Text(
+                        userData['email'],
+                        style:
+                            TextStyle(fontSize: 11, color: Color(0xff170e50)),
+                      ),
+                      currentAccountPicture: CircleAvatar(
+                        backgroundColor:
+                            Theme.of(context).platform == TargetPlatform.iOS
+                                ? Colors.blue
+                                : Colors.white,
+                        child: new ClipRRect(
+                          borderRadius: new BorderRadius.circular(100),
+                          child: Stack(
+                            children: <Widget>[
+                              GestureDetector(
+                                onTap: () {
 //                                Navigator.push(
 //                                    context,
 //                                    new MaterialPageRoute(
 //                                        builder: (context) => new SelectService()));
-                          },
-                          child: FadeInImage.assetNetwork(
-                            placeholder: 'assets/imgs/user.png',
-                            image: userData['avatar'],
-                            fit: BoxFit.cover,
-                            height: 70,
-                            width: 70,
+                                },
+                                child: FadeInImage.assetNetwork(
+                                  placeholder: 'assets/imgs/user.png',
+                                  image: userData['avatar'],
+                                  fit: BoxFit.cover,
+                                  height: 70,
+                                  width: 70,
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
+                      ),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(
+                        Icons.info,
+                        color: Color(0xff170e50),
+                      ),
+                      title: new Text(
+                          Translations.of(context).text('about') + ' Eleve11'),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.account_circle,
+                          color: Color(0xff170e50)),
+                      title: new Text(Translations.of(context).text('profile')),
+                      onTap: () => _onListTileTap(context, "profile"),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.drive_eta, color: Color(0xff170e50)),
+                      title:
+                          new Text(Translations.of(context).text('my_rides')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.my_location, color: Color(0xff170e50)),
+                      title: new Text(
+                          Translations.of(context).text('my_locations')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.favorite_border,
+                          color: Color(0xff170e50)),
+                      title:
+                          new Text(Translations.of(context).text('my_orders')),
+                      onTap: () => _onListTileTap(context, "my_order"),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.feedback, color: Color(0xff170e50)),
+                      title:
+                          new Text(Translations.of(context).text('feedback')),
+                      onTap: () => _onListTileTap(context, "feedback"),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.confirmation_number,
+                          color: Color(0xff170e50)),
+                      title: new Text(
+                          Translations.of(context).text('promo_codes')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.local_offer, color: Color(0xff170e50)),
+                      title: new Text(Translations.of(context).text('offers')),
+                      onTap: () => _onListTileTap(context, "offers"),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.notifications,
+                          color: Color(0xff170e50)),
+                      title: new Text(
+                          Translations.of(context).text('notifications')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new Divider(),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.settings, color: Color(0xff170e50)),
+                      title:
+                          new Text(Translations.of(context).text('settings')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.question_answer,
+                          color: Color(0xff170e50)),
+                      title: new Text(Translations.of(context).text('faq')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.call, color: Color(0xff170e50)),
+                      title:
+                          new Text(Translations.of(context).text('contacts')),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ExpansionTile(
+                      leading:
+                          new Icon(Icons.g_translate, color: Color(0xff170e50)),
+                      title: Text("Change Language"),
+                      children: <Widget>[
+                        ListTile(
+                          dense: true,
+                          contentPadding:
+                              EdgeInsets.only(left: 0.0, right: 0.0),
+                          title: Text(
+                            "English",
+                            textAlign: TextAlign.center,
+                          ),
+                          onTap: () => {
+                            Navigator.of(context).pop(),
+                            Provider.of<LocaleModel>(context)
+                                .changelocale(Locale("en"))
+                          },
+                        ),
+                        ListTile(
+                          dense: true,
+                          contentPadding:
+                              EdgeInsets.only(left: 0.0, right: 0.0),
+                          title: Text(
+                            "Arabic",
+                            textAlign: TextAlign.center,
+                          ),
+                          onTap: () => {
+                            Navigator.of(context).pop(),
+                            Provider.of<LocaleModel>(context)
+                                .changelocale(Locale("ar"))
+                          },
+                        ),
+                        ListTile(
+                          dense: true,
+                          contentPadding:
+                              EdgeInsets.only(left: 0.0, right: 0.0),
+                          title: Text(
+                            "Kurdish",
+                            textAlign: TextAlign.center,
+                          ),
+                          onTap: () => {
+                            Navigator.of(context).pop(),
+                            Provider.of<LocaleModel>(context)
+                                .changelocale(Locale("ku"))
+                          },
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(
-                  Icons.info,
-                  color: Color(0xff170e50),
-                ),
-                title: new Text(
-                    Translations.of(context).text('about') + ' Eleve11'),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading:
-                new Icon(Icons.account_circle, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('profile')),
-                onTap: () => _onListTileTap(context, "profile"),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.drive_eta, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('my_rides')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.my_location, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('my_locations')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading:
-                new Icon(Icons.favorite_border, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('my_orders')),
-                onTap: () => _onListTileTap(context, "my_order"),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.feedback, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('feedback')),
-                onTap: () => _onListTileTap(context, "feedback"),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.confirmation_number,
-                    color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('promo_codes')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.local_offer, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('offers')),
-                onTap: () => _onListTileTap(context, "offers"),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading:
-                new Icon(Icons.notifications, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('notifications')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new Divider(),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.settings, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('settings')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading:
-                new Icon(Icons.question_answer, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('faq')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.call, color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('contacts')),
-                onTap: () => _onListTileTap(context, ""),
-              ),
-              new ExpansionTile(
-                leading: new Icon(Icons.g_translate, color: Color(0xff170e50)),
-                title: Text("Change Language"),
-                children: <Widget>[
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.only(left: 0.0, right: 0.0),
-                    title: Text(
-                      "English",
-                      textAlign: TextAlign.center,
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.new_releases,
+                          color: Color(0xff170e50)),
+                      title: new Text("App version"),
+                      trailing: new Text(
+                        "v1.0.0",
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    onTap: () =>
-                    {
-                      Navigator.of(context).pop(),
-                      Provider.of<LocaleModel>(context)
-                          .changelocale(Locale("en"))
-                    },
-                  ),
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.only(left: 0.0, right: 0.0),
-                    title: Text(
-                      "Arabic",
-                      textAlign: TextAlign.center,
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(Icons.power_settings_new,
+                          color: Color(0xff170e50)),
+                      title: new Text(Translations.of(context).text('logout')),
+                      onTap: () => _onListTileTap(context, "logout"),
                     ),
-                    onTap: () =>
-                    {
-                      Navigator.of(context).pop(),
-                      Provider.of<LocaleModel>(context)
-                          .changelocale(Locale("ar"))
-                    },
-                  ),
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.only(left: 0.0, right: 0.0),
-                    title: Text(
-                      "Kurdish",
-                      textAlign: TextAlign.center,
-                    ),
-                    onTap: () =>
-                    {
-                      Navigator.of(context).pop(),
-                      Provider.of<LocaleModel>(context)
-                          .changelocale(Locale("ku"))
-                    },
-                  ),
-                ],
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.new_releases, color: Color(0xff170e50)),
-                title: new Text("App version"),
-                trailing: new Text(
-                  "v1.0.0",
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-              new ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                leading: new Icon(Icons.power_settings_new,
-                    color: Color(0xff170e50)),
-                title: new Text(Translations.of(context).text('logout')),
-                onTap: () => _onListTileTap(context, "logout"),
-              ),
-            ],
-          ):Container(),
+                  ],
+                )
+              : Container(),
         ),
         body: Stack(
           children: _buildMap(context),
@@ -448,11 +474,10 @@ class _LandingPage extends State<LandingPage> {
     if (from == "logout") {
       showDialog(
           context: context,
-          builder: (context) =>
-              AlertDialog(
+          builder: (context) => AlertDialog(
                 title: Text(Translations.of(context).text('logout')),
                 content:
-                Text(Translations.of(context).text('are_u_sure_logout')),
+                    Text(Translations.of(context).text('are_u_sure_logout')),
                 actions: <Widget>[
                   FlatButton(
                     child: Text(Translations.of(context).text('no')),
@@ -460,10 +485,9 @@ class _LandingPage extends State<LandingPage> {
                   ),
                   FlatButton(
                       child: Text(Translations.of(context).text('yes')),
-                      onPressed: () =>
-                      {
-                        clearPreference(context),
-                      }),
+                      onPressed: () => {
+                            clearPreference(context),
+                          }),
                 ],
               ));
     } else if (from == "history") {
@@ -484,8 +508,7 @@ class _LandingPage extends State<LandingPage> {
     } else {
       showDialog<Null>(
         context: context,
-        builder: (_) =>
-        new AlertDialog(
+        builder: (_) => new AlertDialog(
           title: const Text('Not Implemented'),
           actions: <Widget>[
             new FlatButton(
@@ -507,9 +530,8 @@ class _LandingPage extends State<LandingPage> {
     prefs.setString('userData', '');
     Navigator.pushAndRemoveUntil(
       context,
-      new MaterialPageRoute(
-          builder: (context) => new LoginPage()),
-          (Route<dynamic> route) => false,
+      new MaterialPageRoute(builder: (context) => new LoginPage()),
+      (Route<dynamic> route) => false,
     );
   }
 
@@ -530,191 +552,190 @@ class _LandingPage extends State<LandingPage> {
         children: <Widget>[
           !isConfirmed
               ? Container(
-            width: MediaQuery
-                .of(context)
-                .size
-                .width,
-            decoration: new BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                boxShadow: [
-                  new BoxShadow(
-                    color: Colors.grey,
-                    blurRadius: 5.0,
+                  width: MediaQuery.of(context).size.width,
+                  decoration: new BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      boxShadow: [
+                        new BoxShadow(
+                          color: Colors.grey,
+                          blurRadius: 5.0,
+                        ),
+                      ]),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: <Widget>[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.arrow_back_ios,
+                                      color: Colors.grey,
+                                      size: 14,
+                                    ),
+                                    onPressed: () {},
+                                  ),
+                                  Text(
+                                    locationTitle,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.arrow_forward_ios,
+                                      color: Colors.grey,
+                                      size: 14,
+                                    ),
+                                    onPressed: () {},
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.add_circle,
+                                color: Color(0xff170e50),
+                                size: 24,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                    context,
+                                    new MaterialPageRoute(
+                                        builder: (context) =>
+                                            new AddLocation()));
+                              },
+                            )
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              left: 8, right: 8, bottom: 8),
+                          child: Divider(),
+                        ),
+                        Container(
+                          width: double.maxFinite,
+                          height: 100,
+                          child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: services.length,
+                              itemBuilder: (BuildContext ctxt, int index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 10, right: 10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Container(
+                                        height: 80,
+                                        child: CustomRadio<String, dynamic>(
+                                          services: services[index],
+                                          value: services[index].radioButton,
+                                          groupValue: widget.radioValue,
+                                          animsBuilder: (AnimationController
+                                                  controller) =>
+                                              [
+                                            CurvedAnimation(
+                                                parent: controller,
+                                                curve: Curves.easeInOut),
+                                            ColorTween(
+                                                    begin: Colors.white,
+                                                    end: Colors.deepPurple)
+                                                .animate(controller),
+                                            ColorTween(
+                                                    begin: Colors.deepPurple,
+                                                    end: Colors.white)
+                                                .animate(controller),
+                                          ],
+                                          builder: dynamicBuilder,
+                                        ),
+                                      ),
+                                      Text(
+                                        services[index].name,
+                                        style: TextStyle(fontSize: 13),
+                                      )
+                                    ],
+                                  ),
+                                );
+                              }),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              left: 20, right: 20, bottom: 10, top: 20),
+                          child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                  minWidth: double.infinity, minHeight: 35.0),
+                              child: RaisedButton(
+                                  child: new Text(
+                                      Translations.of(context).text('confirm')),
+                                  onPressed: () {
+                                    if (selectedServiceCat != '') {
+                                      setState(() {
+                                        isConfirmed = true;
+                                      });
+                                    } else {
+                                      _displaySnackBar(
+                                          "Please select one service");
+                                    }
+                                  },
+                                  textColor: Colors.white,
+                                  color: Color(0xff170e50),
+                                  shape: new RoundedRectangleBorder(
+                                      borderRadius:
+                                          new BorderRadius.circular(30.0)))),
+                        )
+                      ],
+                    ),
                   ),
-                ]),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                )
+              : Container(
+                  width: MediaQuery.of(context).size.width,
+                  decoration: new BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      boxShadow: [
+                        new BoxShadow(
+                          color: Colors.grey,
+                          blurRadius: 5.0,
+                        ),
+                      ]),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: <Widget>[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
                             IconButton(
                               icon: Icon(
-                                Icons.arrow_back_ios,
+                                Icons.close,
                                 color: Colors.grey,
-                                size: 14,
+                                size: 24,
                               ),
-                              onPressed: () {},
+                              onPressed: () {
+                                setState(() {
+                                  isConfirmed = false;
+                                });
+                              },
                             ),
                             Text(
-                              locationTitle,
+                              "MY RIDES",
                               style: TextStyle(
                                   fontSize: 13,
                                   fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.bold),
                             ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.grey,
-                                size: 14,
-                              ),
-                              onPressed: () {},
+                            SizedBox(
+                              width: 24,
                             ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.add_circle,
-                          color: Color(0xff170e50),
-                          size: 24,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                              context,
-                              new MaterialPageRoute(
-                                  builder: (context) =>
-                                  new AddLocation()));
-                        },
-                      )
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 8, right: 8, bottom: 8),
-                    child: Divider(),
-                  ),
-                  Container(
-                    width: double.maxFinite,
-                    height: 100,
-                    child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: services.length,
-                        itemBuilder: (BuildContext ctxt, int index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                                left: 10, right: 10),
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Container(
-                                  height: 80,
-                                  child: CustomRadio<String, dynamic>(
-                                    services: services[index],
-                                    value: services[index].radioButton,
-                                    groupValue: widget.radioValue,
-                                    animsBuilder: (AnimationController
-                                    controller) =>
-                                    [
-                                      CurvedAnimation(
-                                          parent: controller,
-                                          curve: Curves.easeInOut),
-                                      ColorTween(
-                                          begin: Colors.white,
-                                          end: Colors.deepPurple)
-                                          .animate(controller),
-                                      ColorTween(
-                                          begin: Colors.deepPurple,
-                                          end: Colors.white)
-                                          .animate(controller),
-                                    ],
-                                    builder: dynamicBuilder,
-                                  ),
-                                ),
-                                Text(
-                                  services[index].name,
-                                  style: TextStyle(fontSize: 13),
-                                )
-                              ],
-                            ),
-                          );
-                        }),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 20, right: 20, bottom: 10, top: 20),
-                    child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                            minWidth: double.infinity, minHeight: 35.0),
-                        child: RaisedButton(
-                            child: new Text(
-                                Translations.of(context).text('confirm')),
-                            onPressed: () {
-                              setState(() {
-                                isConfirmed = true;
-                              });
-                            },
-                            textColor: Colors.white,
-                            color: Color(0xff170e50),
-                            shape: new RoundedRectangleBorder(
-                                borderRadius:
-                                new BorderRadius.circular(30.0)))),
-                  )
-                ],
-              ),
-            ),
-          )
-              : Container(
-            width: MediaQuery
-                .of(context)
-                .size
-                .width,
-            decoration: new BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                boxShadow: [
-                  new BoxShadow(
-                    color: Colors.grey,
-                    blurRadius: 5.0,
-                  ),
-                ]),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: Colors.grey,
-                          size: 24,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isConfirmed = false;
-                          });
-                        },
-                      ),
-                      Text(
-                        "MY RIDES",
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(
-                        width: 24,
-                      ),
 //                          IconButton(
 //                            icon: Icon(
 //                              Icons.add_circle,
@@ -723,82 +744,85 @@ class _LandingPage extends State<LandingPage> {
 //                            ),
 //                            onPressed: () {},
 //                          ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8, right: 8),
-                    child: Divider(),
-                  ),
-                  Container(
-                    width: double.maxFinite,
-                    height: 200,
-                    child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: 4,
-                        itemBuilder: (BuildContext ctxt, int index) {
-                          if (index == 3)
-                            return Padding(
-                                padding: const EdgeInsets.only(
-                                    left: 30, right: 30),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.center,
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.center,
-                                  children: <Widget>[
-                                    Container(
-                                      height: 120,
-                                      child: new ClipRRect(
-                                        borderRadius:
-                                        new BorderRadius.circular(
-                                            8.0),
-                                        child: Stack(
-                                          children: <Widget>[
-                                            GestureDetector(
-                                              onTap: () {
-                                                Navigator.push(
-                                                    context,
-                                                    new MaterialPageRoute(
-                                                        builder: (context) =>
-                                                        new SelectService()));
-                                              },
-                                              child: Container(
-                                                height: 120,
-                                                width: 150,
-                                                decoration: BoxDecoration(
-                                                    color:
-                                                    Colors.black12),
-                                                child: Column(
-                                                    mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .center,
-                                                    children: <Widget>[
-                                                      Icon(Icons.add),
-                                                      Padding(
-                                                        padding:
-                                                        const EdgeInsets
-                                                            .all(8.0),
-                                                        child: Text(
-                                                            "Add New"),
-                                                      )
-                                                    ]),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8, right: 8),
+                          child: Divider(),
+                        ),
+                        Container(
+                          width: double.maxFinite,
+                          height: 200,
+                          child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: myRides.length + 1,
+                              itemBuilder: (BuildContext ctxt, int index) {
+                                if (index == myRides.length)
+                                  return Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 30, right: 30),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.max,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: <Widget>[
+                                          Container(
+                                            height: 120,
+                                            child: new ClipRRect(
+                                              borderRadius:
+                                                  new BorderRadius.circular(
+                                                      8.0),
+                                              child: Stack(
+                                                children: <Widget>[
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      Navigator.push(
+                                                          context,
+                                                          new MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  new AddRide())).then(
+                                                          (onVal) {
+                                                        getMyRides();
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      height: 120,
+                                                      width: 150,
+                                                      decoration: BoxDecoration(
+                                                          color:
+                                                              Colors.black12),
+                                                      child: Column(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: <Widget>[
+                                                            Icon(Icons.add),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                  "Add New"),
+                                                            )
+                                                          ]),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  ],
-                                ));
-                          else
-                            return _buildItem(context);
-                        }),
+                                          )
+                                        ],
+                                      ));
+                                else
+                                  return _buildItem(context, myRides[index]);
+                              }),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                ),
         ]);
     list.add(mapView);
     if (showfooter) {
@@ -818,10 +842,7 @@ class _LandingPage extends State<LandingPage> {
     list.add(appBar);
     var searchbar = Positioned(
         top: 60,
-        left: MediaQuery
-            .of(context)
-            .size
-            .width * 0.05,
+        left: MediaQuery.of(context).size.width * 0.05,
         // width: MediaQuery.of(context).size.width * 0.9,
         child: SearchMapPlaceWidget(
           apiKey: "AIzaSyBGATn-87XZC0qqYEi5Q5rdDLkWcSB1F4s",
@@ -865,7 +886,7 @@ class _LandingPage extends State<LandingPage> {
   Future getLocationAddress(latitude, longitude) async {
     final coordinates = new Coordinates(latitude, longitude);
     var addresses =
-    await Geocoder.local.findAddressesFromCoordinates(coordinates);
+        await Geocoder.local.findAddressesFromCoordinates(coordinates);
     var first = addresses.first;
     setState(() {
       locationTitle = first.subLocality;
@@ -895,15 +916,14 @@ class _LandingPage extends State<LandingPage> {
         getLocationAddress(currentLocation.latitude, currentLocation.longitude);
         if (markers.length > 0) {
           markers.remove(markers.firstWhere((Marker marker) =>
-          marker.markerId == MarkerId("currentLocation")));
+              marker.markerId == MarkerId("currentLocation")));
         }
         markers.add(Marker(
           markerId: MarkerId("currentLocation"),
           icon: myIcon,
           position: LatLng(currentLocation.latitude, currentLocation.longitude),
-          onTap: () =>
-              _onTap(
-                  LatLng(currentLocation.latitude, currentLocation.longitude)),
+          onTap: () => _onTap(
+              LatLng(currentLocation.latitude, currentLocation.longitude)),
         ));
         setState(() {
           _originLocation =
@@ -922,26 +942,94 @@ class _LandingPage extends State<LandingPage> {
           onTap: () {
             setState(() {
               widget.radioValue = value;
+              selectedServiceCat = services.id;
             });
           },
           child: Container(
               alignment: Alignment.center,
               margin: EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
-              padding: EdgeInsets.all(6.0 + animValues[0] * 6.0),
+              padding: EdgeInsets.all(4.0 + animValues[0] * 6.0),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: animValues[1],
               ),
-              child: Image.asset("assets/imgs/logo.png")));
+              child: FadeInImage.assetNetwork(
+                placeholder: 'assets/imgs/logo.png',
+                image: services.imageurl,
+                fit: BoxFit.cover,
+              )));
     };
   }
 
   List<Services> getServices() {
-    return [
-      Services("", "WASH", "0", "1"),
-//      Services("", "MAINTAINANCE", "1", "2"),
-//      Services("", "SPECIAL CARE", "1", "3"),
-    ];
+    setState(() {
+      _isLoading = true;
+    });
+    var request = new MultipartRequest(
+        "GET", Uri.parse(api_url + "user/getServiceCategories"));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          List<Services> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new Services(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['name'],
+                  data['data'][i]['image'],
+                  "0",
+                  data['data'][i]['active'],
+                  "1",
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at']));
+            }
+            setState(() {
+              services = tempList;
+            });
+          }
+        }
+      });
+    });
+  }
+
+  List<Rides> getMyRides() {
+    setState(() {
+      _isLoading = true;
+    });
+    var request =
+        new MultipartRequest("GET", Uri.parse(api_url + "user/getMyRides"));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          List<Rides> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new Rides(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['user_id'],
+                  data['data'][i]['car_model_id'],
+                  data['data'][i]['type'],
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at'],
+                  data['data'][i]['car_model']));
+            }
+            setState(() {
+              myRides = tempList;
+            });
+          }
+        }
+      });
+    });
   }
 
   Future setIcons() async {
@@ -949,7 +1037,7 @@ class _LandingPage extends State<LandingPage> {
         await getBytesFromAsset('assets/imgs/gps.png', 100));
   }
 
-  _buildItem(BuildContext context) {
+  _buildItem(BuildContext context, Rides myRid) {
     return Padding(
       padding: const EdgeInsets.only(left: 30, right: 30),
       child: Column(
@@ -968,12 +1056,12 @@ class _LandingPage extends State<LandingPage> {
                       Navigator.push(
                           context,
                           new MaterialPageRoute(
-                              builder: (context) => new SelectService()));
+                              builder: (context) =>
+                                  new SelectService(selectedServiceCat,myRid.type)));
                     },
                     child: FadeInImage.assetNetwork(
                       placeholder: 'assets/imgs/placeholder.png',
-                      image:
-                      "https://akm-img-a-in.tosshub.com/indiatoday/images/story/201709/lamborghini_story_647_090817040539.jpg",
+                      image: myRid.car_model['image'],
                     ),
                   ),
                   Positioned(
@@ -994,12 +1082,26 @@ class _LandingPage extends State<LandingPage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Avendator",
+              myRid.car_model['name'],
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ],
       ),
     );
+  }
+
+  _displaySnackBar(msg) {
+    final snackBar = new SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.black,
+      action: SnackBarAction(
+        label: 'OK',
+        onPressed: () {
+          // Some code to undo the change!
+        },
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
   }
 }

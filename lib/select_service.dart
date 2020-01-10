@@ -1,27 +1,63 @@
+import 'dart:convert';
+
 import 'package:circular_check_box/circular_check_box.dart';
 import 'package:eleve11/modal/child_services.dart';
 import 'package:eleve11/modal/service_list.dart';
 import 'package:eleve11/overview_order.dart';
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/expandable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:eleve11/modal/child_services.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SelectService extends StatefulWidget {
-  _SelectServiceState createState() => _SelectServiceState();
+  String selectedServiceCat;
+  String type;
+
+  SelectService(String selectedServiceCat, String type) {
+    this.selectedServiceCat = selectedServiceCat;
+    this.type = type;
+  }
+
+  _SelectServiceState createState() =>
+      _SelectServiceState(this.selectedServiceCat, this.type);
 }
 
 class _SelectServiceState extends State<SelectService> {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   List<ServiceList> serviceList = new List();
+  String selectedServiceCat;
+
+  String acccessToken = "";
+  Map userData = null;
+  bool _isLoading = true;
+  String type;
+  String price = "";
+
+  _SelectServiceState(String selectedServiceCat, String type) {
+    this.selectedServiceCat = selectedServiceCat;
+    this.type = type;
+  }
 
   @override
   void initState() {
     // TODO: implement initState
-    serviceList = getServices();
+    checkIsLogin();
     super.initState();
+  }
+
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    JsonCodec codec = new JsonCodec();
+    userData = codec.decode(prefs.getString("userData"));
+    acccessToken = prefs.getString("accessToken");
+    getServices();
   }
 
   @override
@@ -109,11 +145,11 @@ class _SelectServiceState extends State<SelectService> {
                           children: <Widget>[
                             Row(
                               children: <Widget>[
-                                SvgPicture.asset(serviceList[index].icon,
-                                    allowDrawingOutsideViewBox: true,
-                                    height: 30,
-                                    width: 30,
-                                    color: Color(0xff170e50)),
+//                                SvgPicture.asset(serviceList[index].icon,
+//                                    allowDrawingOutsideViewBox: true,
+//                                    height: 30,
+//                                    width: 30,
+//                                    color: Color(0xff170e50)),
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Column(
@@ -127,8 +163,79 @@ class _SelectServiceState extends State<SelectService> {
                                             fontWeight: FontWeight.bold),
                                       ),
                                       Text(
-                                        serviceList[index].price,
+                                        type == 'SEDAN'
+                                            ? serviceList[index].sedan_price
+                                            : serviceList[index].suv_price,
                                         style: TextStyle(fontSize: 13),
+                                      )
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                            CircularCheckBox(
+                              value: serviceList[index].isChecked,
+                              activeColor: Color(0xff170e50),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.padded,
+                              onChanged: (bool x) {
+                                setState(() {
+                                  serviceList[index].isChecked =
+                                      !serviceList[index].isChecked;
+                                  if (x) {
+                                    if (type == 'SEDAN') {
+                                      price = serviceList[index].sedan_price;
+                                    } else {
+                                      price = serviceList[index].suv_price;
+                                    }
+                                    for (var i = 0;
+                                        i < serviceList.length;
+                                        i++) {
+                                      if (index != i) {
+                                        serviceList[i].isChecked = false;
+                                      }
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    expanded: Column(children: [
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(left: 30, right: 30, top: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+//                                SvgPicture.asset(serviceList[index].icon,
+//                                    allowDrawingOutsideViewBox: true,
+//                                    height: 30,
+//                                    width: 30,
+//                                    color: Colors.green),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        serviceList[index].name,
+                                        style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green),
+                                      ),
+                                      Text(
+                                        type == 'SEDAN'
+                                            ? serviceList[index].sedan_price
+                                            : serviceList[index].suv_price,
+                                        style: TextStyle(
+                                            fontSize: 13, color: Colors.green),
                                       )
                                     ],
                                   ),
@@ -159,67 +266,11 @@ class _SelectServiceState extends State<SelectService> {
                           ],
                         ),
                       ),
-                    ),
-                    expanded: Column(children: [
-                      Padding(
-                        padding:
-                        const EdgeInsets.only(left: 30, right: 30, top: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Row(
-                              children: <Widget>[
-                                SvgPicture.asset(serviceList[index].icon,
-                                    allowDrawingOutsideViewBox: true,
-                                    height: 30,
-                                    width: 30,
-                                    color: Colors.green),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text(
-                                        serviceList[index].name,
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,color: Colors.green),
-                                      ),
-                                      Text(
-                                        serviceList[index].price,
-                                        style: TextStyle(fontSize: 13,color: Colors.green),
-                                      )
-                                    ],
-                                  ),
-                                )
-                              ],
-                            ),
-                            CircularCheckBox(
-                              value: serviceList[index].isChecked,
-                              activeColor: Color(0xff170e50),
-                              materialTapTargetSize:
-                              MaterialTapTargetSize.padded,
-                              onChanged: (bool x) {
-                                setState(() {
-                                  serviceList[index].isChecked =
-                                  !serviceList[index].isChecked;
-                                  if (x) {
-                                    for (var i = 0;
-                                    i < serviceList.length;
-                                    i++) {
-                                      if (index != i) {
-                                        serviceList[i].isChecked = false;
-                                      }
-                                    }
-                                  }
-                                });
-                              },
-                            ),
-                          ],
-                        ),
+                      HtmlWidget(
+                        serviceList[index].description,
+                        webView: true,
                       ),
-                      _childList(serviceList[index].otherservices),
+//                      _childList(serviceList[index].otherservices),
                     ]),
                   ),
                 ],
@@ -247,7 +298,7 @@ class _SelectServiceState extends State<SelectService> {
                     ),
                   ),
                   Text(
-                    "95 AED",
+                    price,
                     style: TextStyle(
                       color: Color(0xff170e50),
                       fontWeight: FontWeight.bold,
@@ -279,26 +330,81 @@ class _SelectServiceState extends State<SelectService> {
                         borderRadius: new BorderRadius.circular(30.0)))),
           )
         ]);
-    list.add(footer);
+    if (serviceList.where((i) => i.isChecked == true).toList().length > 0) {
+      list.add(footer);
+    }
+    if (_isLoading) {
+      var modal = new Stack(
+        children: [
+          new Opacity(
+            opacity: 0.3,
+            child: const ModalBarrier(dismissible: false, color: Colors.grey),
+          ),
+          new Center(
+            child: SpinKitRotatingPlain(
+              itemBuilder: _customicon,
+            ),
+          ),
+        ],
+      );
+      list.add(modal);
+    }
+    return list;
     return list;
   }
 
-  List<ServiceList> getServices() {
-    List<ChildSerices> childservices1 = new List();
-    List<ChildSerices> childservices2 = new List();
-    childservices1.add(new ChildSerices("Washing full Body"));
-    childservices1.add(new ChildSerices("Shining"));
-    childservices1.add(new ChildSerices("Cleaning tyres"));
-    childservices1.add(new ChildSerices("Checking tyres pressure"));
+  Widget _customicon(BuildContext context, int index) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset("assets/imgs/logo.png"),
+      ),
+      decoration: new BoxDecoration(
+          color: Color(0xff170e50),
+          borderRadius: new BorderRadius.circular(5.0)),
+    );
+  }
 
-    childservices2.add(new ChildSerices("Cleaning engines"));
-    childservices2.add(new ChildSerices("Checking engines"));
-    return [
-      ServiceList("assets/imgs/carwash.svg", "Full Body Wash", "35 AED", false,
-          childservices1),
-      ServiceList("assets/imgs/car-seat.svg", "Engine Wash", "15 AED", false,
-          childservices2),
-    ];
+  List<ServiceList> getServices() {
+    print(selectedServiceCat);
+    print(acccessToken);
+    setState(() {
+      _isLoading = true;
+    });
+    var request = new MultipartRequest(
+        "GET", Uri.parse(api_url + "user/getServices/" + selectedServiceCat));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          List<ServiceList> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new ServiceList(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['service_category_id'].toString(),
+                  data['data'][i]['name'],
+                  data['data'][i]['sedan_price'],
+                  data['data'][i]['suv_price'],
+                  data['data'][i]['description'],
+                  "0",
+                  data['data'][i]['active'],
+                  "1",
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at'],
+                  false));
+            }
+            setState(() {
+              serviceList = tempList;
+            });
+          }
+        }
+      });
+    });
   }
 
   _childList(List<ChildSerices> otherservices) {
@@ -307,7 +413,7 @@ class _SelectServiceState extends State<SelectService> {
         shrinkWrap: true,
         itemCount: otherservices.length,
         itemBuilder: (BuildContext ctxt, int index) {
-         return Padding(
+          return Padding(
             padding: const EdgeInsets.only(left: 40, right: 30, top: 20),
             child: Text(
               otherservices[index].name,
