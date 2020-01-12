@@ -1,13 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'dart:ui' as ui;
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart';
 import 'package:location/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddLocation extends StatefulWidget {
   _AddLocationState createState() => _AddLocationState();
@@ -27,18 +32,27 @@ class _AddLocationState extends State<AddLocation> {
   bool _isLoading = true;
 
   String locationTitle = "";
+  String lattitude = "";
+  String longitude = "";
   String fulladdress = "";
+  String acccessToken = "";
 
   TextEditingController _address1controller = new TextEditingController();
   TextEditingController _address2controller = new TextEditingController();
-
+  Map userData = null;
   @override
   void initState() {
     _getLocation();
     setIcons();
+    checkIsLogin();
     super.initState();
   }
-
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    JsonCodec codec = new JsonCodec();
+    userData = codec.decode(prefs.getString("userData"));
+    acccessToken = prefs.getString("accessToken");
+  }
   Future _getLocation() async {
     try {
       if (location.serviceEnabled() == true) {
@@ -171,7 +185,6 @@ class _AddLocationState extends State<AddLocation> {
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
             child: TextField(
-              maxLength: 10,
               controller: _address1controller,
               style: TextStyle(fontSize: 13.0),
               decoration: new InputDecoration(
@@ -189,7 +202,6 @@ class _AddLocationState extends State<AddLocation> {
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8),
             child: TextField(
-              maxLength: 10,
               controller: _address2controller,
               style: TextStyle(fontSize: 13.0),
               decoration: new InputDecoration(
@@ -212,15 +224,11 @@ class _AddLocationState extends State<AddLocation> {
                 child: RaisedButton(
                     child: new Text(Translations.of(context).text('confirm')),
                     onPressed: () {
-                      setState(() {
-                        _isLoading = true;
-                      });
-                      new Timer(new Duration(milliseconds: 3000), () {
-                        setState(() {
-                          _isLoading = false;
-                          Navigator.of(context).pop();
-                        });
-                      });
+                      if(_address1controller.text!='') {
+                        addMyLocation();
+                      }else{
+                        _displaySnackBar('Enter House/Flat/Block No.');
+                      }
                     },
                     textColor: Colors.white,
                     color: Color(0xff170e50),
@@ -231,9 +239,50 @@ class _AddLocationState extends State<AddLocation> {
       ),
     );
     list.add(address);
+    if (_isLoading) {
+      var modal = new Stack(
+        children: [
+          new Opacity(
+            opacity: 0.3,
+            child: const ModalBarrier(dismissible: false, color: Colors.grey),
+          ),
+          new Center(
+            child: SpinKitRotatingPlain(
+              itemBuilder: _customicon,
+            ),
+          ),
+        ],
+      );
+      list.add(modal);
+    }
+
     return list;
   }
+  Widget _customicon(BuildContext context, int index) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset("assets/imgs/logo.png"),
+      ),
+      decoration: new BoxDecoration(
+          color: Color(0xff170e50),
+          borderRadius: new BorderRadius.circular(5.0)),
+    );
+  }
 
+  _displaySnackBar(msg) {
+    final snackBar = new SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.black,
+      action: SnackBarAction(
+        label: 'OK',
+        onPressed: () {
+          // Some code to undo the change!
+        },
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
+  }
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
@@ -248,15 +297,43 @@ class _AddLocationState extends State<AddLocation> {
     myIcon = BitmapDescriptor.fromBytes(
         await getBytesFromAsset('assets/imgs/gps.png', 100));
   }
+  addMyLocation() {
+    setState(() {
+      _isLoading = true;
+    });
+    var request = new MultipartRequest("POST", Uri.parse(api_url + "user/address/add"));
+    request.fields['lat'] = lattitude;
+    request.fields['lon'] = longitude;
+    request.fields['address'] = fulladdress;
+    request.fields['landmark'] = _address2controller.text;
+    request.fields['house'] = _address1controller.text;
+    request.fields['name'] = locationTitle;
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        presentToast(data['message'], context, 0);
+        if (data['code'] == 200) {
+          Navigator.of(context).pop();
+        }
+      });
+    });
+  }
 
-  Future getLocationAddress(latitude, longitude) async {
-    final coordinates = new Coordinates(latitude, longitude);
+  Future getLocationAddress(latitude, long) async {
+    final coordinates = new Coordinates(latitude, long);
     var addresses =
         await Geocoder.local.findAddressesFromCoordinates(coordinates);
     var first = addresses.first;
     setState(() {
+      lattitude = latitude.toString();
+      longitude = long.toString();
       locationTitle = first.subLocality;
       fulladdress = first.addressLine;
+      _isLoading = false;
     });
     print(
         ' ${first.locality}, ${first.adminArea},${first.subLocality}, ${first.subAdminArea},${first.addressLine}, ${first.featureName},${first.thoroughfare}, ${first.subThoroughfare}');

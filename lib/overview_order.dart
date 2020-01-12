@@ -1,27 +1,98 @@
+import 'dart:convert';
+
 import 'package:circular_check_box/circular_check_box.dart';
+import 'package:eleve11/landing_page.dart';
 import 'package:eleve11/modal/service_list.dart';
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/show_directions.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OverViewOrder extends StatefulWidget {
   List<ServiceList> serviceList;
+  String price;
+  String address_id;
+  String latitude;
+  String longitude;
+  String selectedServiceCat;
+  String type;
 
-  OverViewOrder(List<ServiceList> serviceList) {
+  OverViewOrder(List<ServiceList> serviceList, String type, String price, String address_id,
+      String latitude, String longitude, String selectedServiceCat) {
     this.serviceList = serviceList;
+    this.type = type;
+    this.price = price;
+    this.address_id = address_id;
+    this.latitude = latitude;
+    this.longitude = longitude;
+    this.selectedServiceCat = selectedServiceCat;
   }
 
-  _OverViewOrderState createState() => _OverViewOrderState(this.serviceList);
+  _OverViewOrderState createState() => _OverViewOrderState(
+      this.serviceList,
+      this.type,
+      this.price,
+      this.address_id,
+      this.latitude,
+      this.longitude,
+      this.selectedServiceCat);
 }
 
 class _OverViewOrderState extends State<OverViewOrder> {
   List<ServiceList> serviceList;
   String isCash = "0";
+  String price = "";
+  String type = "";
+  String address_id;
+  String latitude;
+  String longitude;
+  String selectedServiceCat;
+  String originalPrice = "";
+  String acccessToken = "";
+  Map userData = null;
+  bool _isLoading = false;
   TextEditingController _promoCodecontroller = new TextEditingController();
+  int textLength = 0;
+  bool couponapplied = false;
+  String msg = "";
+  String discountValue = "";
+  String discountType = "";
+  String discountedPrice = "";
 
-  _OverViewOrderState(List<ServiceList> serviceList) {
+  _OverViewOrderState(
+      List<ServiceList> serviceList,
+      String type,
+      String price,
+      String address_id,
+      String latitude,
+      String longitude,
+      String selectedServiceCat) {
     this.serviceList = serviceList;
+    this.originalPrice = price;
+    this.type = type;
+    this.price = price;
+    this.address_id = address_id;
+    this.latitude = latitude;
+    this.longitude = longitude;
+    this.selectedServiceCat = selectedServiceCat;
+  }
+
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    JsonCodec codec = new JsonCodec();
+    userData = codec.decode(prefs.getString("userData"));
+    acccessToken = prefs.getString("accessToken");
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    checkIsLogin();
   }
 
   @override
@@ -101,7 +172,9 @@ class _OverViewOrderState extends State<OverViewOrder> {
                                   fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              serviceList[index].suv_price,
+                              discountType == 'SEDAN'
+                                  ? serviceList[index].sedan_price
+                                  : serviceList[index].suv_price,
                               style: TextStyle(fontSize: 13),
                             )
                           ],
@@ -122,22 +195,123 @@ class _OverViewOrderState extends State<OverViewOrder> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
-            child: TextField(
-              maxLength: 10,
-              controller: _promoCodecontroller,
-              style: TextStyle(fontSize: 13.0),
-              decoration: new InputDecoration(
-                counterStyle: TextStyle(
-                  height: double.minPositive,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    maxLength: 10,
+                    onChanged: (text) {
+                      setState(() {
+                        textLength = text.length;
+                      });
+                    },
+                    controller: _promoCodecontroller,
+                    style: TextStyle(fontSize: 13.0),
+                    decoration: new InputDecoration(
+                      counterStyle: TextStyle(
+                        height: double.minPositive,
+                      ),
+                      counterText: "",
+                      focusedErrorBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: couponapplied ? Colors.green : Colors.red),
+                      ),
+                      errorText: couponapplied
+                          ? "PROMO Applied successfully"
+                          : msg != '' ? msg : null,
+                      errorStyle: TextStyle(
+                          color: couponapplied ? Colors.green : Colors.red),
+                      labelText: "PROMO CODE",
+                      hintStyle: TextStyle(fontSize: 13),
+                      fillColor: Colors.white,
+                      //fillColor: Colors.green
+                    ),
+                  ),
                 ),
-                counterText: "",
-                labelText: "PROMO CODE",
-                hintStyle: TextStyle(fontSize: 13),
-                fillColor: Colors.white,
-                //fillColor: Colors.green
-              ),
+                textLength > 0
+                    ? Wrap(
+                        children: <Widget>[
+                          GestureDetector(
+                            onTap: () {
+                              couponCheck();
+                            },
+                            child: Text(
+                              "Apply",
+                              style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.deepOrangeAccent),
+                            ),
+                          )
+                        ],
+                      )
+                    : Text('')
+              ],
             ),
           ),
+          couponapplied
+              ? Padding(
+                  padding:
+                      const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
+                  child: Container(
+                    child: Column(
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text("Original Price",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat', fontSize: 12)),
+                              Text(originalPrice,
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text("Discount",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat', fontSize: 12)),
+                              Text(discountedPrice,
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text("Amount to pay",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat', fontSize: 12)),
+                              Text(price,
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  width: 10,
+                ),
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
             child: Row(
@@ -226,7 +400,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
                     ),
                   ),
                   Text(
-                    "95 AED",
+                    price,
                     style: TextStyle(
                       color: Color(0xff170e50),
                       fontWeight: FontWeight.bold,
@@ -244,7 +418,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
                 child: RaisedButton(
                     child: new Text(Translations.of(context).text('continue')),
                     onPressed: () {
-                      showSucessDialog();
+                      bookingAdd();
                     },
                     textColor: Colors.white,
                     color: Color(0xff170e50),
@@ -253,10 +427,38 @@ class _OverViewOrderState extends State<OverViewOrder> {
           )
         ]);
     list.add(footer);
+    if (_isLoading) {
+      var modal = new Stack(
+        children: [
+          new Opacity(
+            opacity: 0.3,
+            child: const ModalBarrier(dismissible: false, color: Colors.grey),
+          ),
+          new Center(
+            child: SpinKitRotatingPlain(
+              itemBuilder: _customicon,
+            ),
+          ),
+        ],
+      );
+      list.add(modal);
+    }
     return list;
   }
 
-  void showSucessDialog() {
+  Widget _customicon(BuildContext context, int index) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset("assets/imgs/logo.png"),
+      ),
+      decoration: new BoxDecoration(
+          color: Color(0xff170e50),
+          borderRadius: new BorderRadius.circular(5.0)),
+    );
+  }
+
+  void showSucessDialog(data) {
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -284,11 +486,11 @@ class _OverViewOrderState extends State<OverViewOrder> {
                         fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    "FOR ORDERING ELVEVE 11,\nYOU JUST HELPED US SAVE",
+                    "FOR ORDERING ELVEVE 11,\nENJOY OUR SERVICES",
                     style: TextStyle(fontSize: 13, fontFamily: 'Montserrat'),
                   ),
                   Text(
-                    "7,000,000",
+                    data['booking_ref'],
                     style: TextStyle(
                         fontSize: 38,
                         fontFamily: 'Montserrat',
@@ -296,7 +498,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
                         color: Color(0xff68CCEA)),
                   ),
                   Text(
-                    "litres of water",
+                    "is your Reference No.",
                     style: TextStyle(fontSize: 13, fontFamily: 'Montserrat'),
                   ),
                   Padding(
@@ -325,5 +527,89 @@ class _OverViewOrderState extends State<OverViewOrder> {
             ),
           );
         });
+  }
+
+  void couponCheck() {
+    setState(() {
+      _isLoading = true;
+    });
+    var request =
+        new MultipartRequest("POST", Uri.parse(api_url + "user/coupon/check"));
+    request.fields['code'] = _promoCodecontroller.text;
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          setState(() {
+            couponapplied = true;
+            if (data['coupon']['type'] == 'PERCENTAGE') {
+              price = (double.parse(originalPrice) -
+                      double.parse(originalPrice) *
+                          (double.parse(data['coupon']['value']) / 100))
+                  .toStringAsFixed(2);
+              discountedPrice = (double.parse(originalPrice) *
+                      (double.parse(data['coupon']['value']) / 100))
+                  .toStringAsFixed(2);
+            } else {
+              price = (double.parse(originalPrice) -
+                      double.parse(data['coupon']['value']))
+                  .toStringAsFixed(2);
+              discountedPrice =
+                  double.parse(data['coupon']['value']).toStringAsFixed(2);
+            }
+            discountValue = data['coupon']['value'];
+            discountType = data['coupon']['type'];
+          });
+        } else {
+          setState(() {
+            couponapplied = false;
+            msg = data['message'];
+          });
+        }
+      });
+    });
+  }
+
+  void bookingAdd() {
+    setState(() {
+      _isLoading = true;
+    });
+    print(address_id);
+    print(selectedServiceCat);
+    print(originalPrice);
+    print(discountValue);
+    print(discountType);
+    print(price);
+    print(latitude);
+    print(longitude);
+    var request =
+        new MultipartRequest("POST", Uri.parse(api_url + "user/booking/add"));
+    request.fields['address_id'] = address_id;
+    request.fields['service_id'] = selectedServiceCat;
+    request.fields['actual_price'] = originalPrice;
+    request.fields['discount_value'] = discountValue;
+    request.fields['discount_type'] = discountType;
+    request.fields['discounted_price'] = price;
+    request.fields['user_lat'] = latitude;
+    request.fields['user_lon'] = longitude;
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        presentToast(data['message'], context, 0);
+        if (data['code'] == 200) {
+          showSucessDialog(data['data']);
+        } else {
+          presentToast(data['message'], context, 0);
+        }
+      });
+    });
   }
 }

@@ -1,23 +1,49 @@
-import 'package:eleve11/profile.dart' as prefix0;
+import 'dart:convert';
+
+import 'package:eleve11/profile.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfilePageDesign extends StatelessWidget {
+class ProfilePageDesign extends StatefulWidget {
+  _ProfilePageDesign createState() => _ProfilePageDesign();
+}
+
+class _ProfilePageDesign extends State<ProfilePageDesign> {
   TextStyle _style() {
     return TextStyle(fontWeight: FontWeight.bold);
+  }
+
+  Map userData = null;
+  String acccessToken = "";
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    checkIsLogin();
+  }
+
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    JsonCodec codec = new JsonCodec();
+    setState(() {
+      userData = codec.decode(prefs.getString("userData"));
+      acccessToken = prefs.getString("accessToken");
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(),
+      appBar: CustomAppBar(userData),
       body: Container(
         padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
+        child: userData!=null?Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text("Name"),
@@ -25,7 +51,7 @@ class ProfilePageDesign extends StatelessWidget {
               height: 4,
             ),
             Text(
-              "Milan Short",
+              userData['name'],
               style: _style(),
             ),
             SizedBox(
@@ -38,7 +64,7 @@ class ProfilePageDesign extends StatelessWidget {
             SizedBox(
               height: 4,
             ),
-            Text("milan@gmail.com"),
+            Text(userData['email']),
             SizedBox(
               height: 16,
             ),
@@ -49,7 +75,7 @@ class ProfilePageDesign extends StatelessWidget {
             SizedBox(
               height: 4,
             ),
-            Text("29th Apr, 2019"),
+            Text(userData['dob']),
             SizedBox(
               height: 16,
             ),
@@ -60,21 +86,24 @@ class ProfilePageDesign extends StatelessWidget {
             SizedBox(
               height: 4,
             ),
-            Text("9383930000"),
+            Text(userData['mobile']),
             SizedBox(
               height: 16,
             )
           ],
+        ):SizedBox(
+          height: 10,
         ),
       ),
     );
   }
 }
 
-final String url =
-    "http://chuteirafc.cartacapital.com.br/wp-content/uploads/2018/12/15347041965884.jpg";
-
 class CustomAppBar extends StatelessWidget with PreferredSizeWidget {
+  Map userData;
+  CustomAppBar(Map userData){
+    this.userData = userData;}
+
   @override
   Size get preferredSize => Size(double.infinity, 280);
 
@@ -123,13 +152,15 @@ class CustomAppBar extends StatelessWidget with PreferredSizeWidget {
               children: <Widget>[
                 Column(
                   children: <Widget>[
-                    Container(
+                    userData!=null?Container(
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           image: DecorationImage(
-                              fit: BoxFit.cover, image: NetworkImage(url))),
+                              fit: BoxFit.cover, image: NetworkImage(userData['avatar']))),
+                    ):SizedBox(
+                      height: 10,
                     ),
                     SizedBox(
                       height: 16,
@@ -140,26 +171,26 @@ class CustomAppBar extends StatelessWidget with PreferredSizeWidget {
                     )
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Row(
-                    children: <Widget>[
-                      SvgPicture.asset(
-                        "assets/imgs/facebook.svg",
-                        allowDrawingOutsideViewBox: true,
-                        height: 40,
-                        width: 30,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          "milan.short854@gmail.com",
-                          style: TextStyle(fontSize: 12, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+//                Padding(
+//                  padding: const EdgeInsets.only(top: 16.0),
+//                  child: Row(
+//                    children: <Widget>[
+//                      SvgPicture.asset(
+//                        "assets/imgs/facebook.svg",
+//                        allowDrawingOutsideViewBox: true,
+//                        height: 40,
+//                        width: 30,
+//                      ),
+//                      Padding(
+//                        padding: const EdgeInsets.all(8.0),
+//                        child: Text(
+//                          "milan.short854@gmail.com",
+//                          style: TextStyle(fontSize: 12, color: Colors.white),
+//                        ),
+//                      ),
+//                    ],
+//                  ),
+//                ),
               ],
             ),
             SizedBox(
@@ -173,7 +204,7 @@ class CustomAppBar extends StatelessWidget with PreferredSizeWidget {
                   Navigator.push(
                       context,
                       new MaterialPageRoute(
-                          builder: (context) => new prefix0.ProfilePage()));
+                          builder: (context) => new ProfilePage()));
                 },
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(0, 24, 16, 0),

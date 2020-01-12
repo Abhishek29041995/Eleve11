@@ -1,6 +1,13 @@
+import 'dart:convert';
+
+import 'package:clipboard_manager/clipboard_manager.dart';
 import 'package:eleve11/modal/order_list.dart';
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/subscription.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OffersPage extends StatefulWidget {
   _OffersPageState createState() => _OffersPageState();
@@ -8,20 +15,30 @@ class OffersPage extends StatefulWidget {
 
 class _OffersPageState extends State<OffersPage> {
   List<Widget> sample = new List();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   List<OrderList> serviceList = new List();
-
+  Map userData = null;
+  String acccessToken = "";
+  bool _isLoading = true;
   @override
   void initState() {
     // TODO: implement initState
-    serviceList = getServices();
+    checkIsLogin();
     super.initState();
   }
-
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    JsonCodec codec = new JsonCodec();
+    userData = codec.decode(prefs.getString("userData"));
+    acccessToken = prefs.getString("accessToken");
+    getServices();
+  }
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return new SafeArea(
       child: Scaffold(
+        key:_scaffoldKey,
         body: Stack(
           children: _buildWidget(context),
         ),
@@ -60,38 +77,38 @@ class _OffersPageState extends State<OffersPage> {
       ),
     );
     list.add(appBar);
-    var subscription = Positioned(
-      right: 0,
-      top: 56,
-      child: Card(
-        color: Color(0xff170e50),
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20), topLeft: Radius.circular(20))),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: (){
-              Navigator.push(
-                  context,
-                  new MaterialPageRoute(
-                      builder: (context) =>
-                      new SubscriptionPlans()));
-            },
-            child: Text(
-              "Subscribe",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontFamily: 'Montserrat',
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    list.add(subscription);
+//    var subscription = Positioned(
+//      right: 0,
+//      top: 56,
+//      child: Card(
+//        color: Color(0xff170e50),
+//        elevation: 4,
+//        shape: RoundedRectangleBorder(
+//            borderRadius: BorderRadius.only(
+//                bottomLeft: Radius.circular(20), topLeft: Radius.circular(20))),
+//        child: Padding(
+//          padding: const EdgeInsets.all(8.0),
+//          child: GestureDetector(
+//            onTap: (){
+//              Navigator.push(
+//                  context,
+//                  new MaterialPageRoute(
+//                      builder: (context) =>
+//                      new SubscriptionPlans()));
+//            },
+//            child: Text(
+//              "Subscribe",
+//              style: TextStyle(
+//                color: Colors.white,
+//                fontSize: 11,
+//                fontFamily: 'Montserrat',
+//              ),
+//            ),
+//          ),
+//        ),
+//      ),
+//    );
+//    list.add(subscription);
     var servicelist = Padding(
       padding: EdgeInsets.only(top: 80),
       child: ListView.separated(
@@ -114,23 +131,37 @@ class _OffersPageState extends State<OffersPage> {
                           color: Color(0xFFFFD180)),
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Image.asset(
-                              serviceList[index].companyicon,
-                              width: 48,
-                              height: 20,
-                            ),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text(
-                              serviceList[index].couponcode,
-                              style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        child: GestureDetector(
+                          onLongPress: (){
+                            ClipboardManager.copyToClipBoard(serviceList[index].code).then((result) {
+                              final snackBar = SnackBar(
+                                content: Text('Copied to Clipboard'),
+                                action: SnackBarAction(
+                                  label: 'Undo',
+                                  onPressed: () {},
+                                ),
+                              );
+                              _scaffoldKey.currentState.showSnackBar(snackBar);
+                            });
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              FadeInImage.assetNetwork(
+                                placeholder: 'assets/imgs/placeholder.png',
+                                image: serviceList[index].image,
+                                height: 20,
+                              ),
+                              SizedBox(
+                                width: 10,
+                              ),
+                              Text(
+                                serviceList[index].code,
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -138,13 +169,13 @@ class _OffersPageState extends State<OffersPage> {
                       height: 10,
                     ),
                     Text(
-                      serviceList[index].offerTitle,
+                      serviceList[index].name,
                       style:
                           TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Divider(),
                     Text(
-                      serviceList[index].offerDesc,
+                      serviceList[index].description,
                       style: TextStyle(fontSize: 13),
                     )
                   ],
@@ -152,51 +183,73 @@ class _OffersPageState extends State<OffersPage> {
           }),
     );
     list.add(servicelist);
+    if (_isLoading) {
+      var modal = new Stack(
+        children: [
+          new Opacity(
+            opacity: 0.3,
+            child: const ModalBarrier(dismissible: false, color: Colors.grey),
+          ),
+          new Center(
+            child: SpinKitRotatingPlain(
+              itemBuilder: _customicon,
+            ),
+          ),
+        ],
+      );
+      list.add(modal);
+    }
     return list;
+  }
+  Widget _customicon(BuildContext context, int index) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset("assets/imgs/logo.png"),
+      ),
+      decoration: new BoxDecoration(
+          color: Color(0xff170e50),
+          borderRadius: new BorderRadius.circular(5.0)),
+    );
   }
 
   List<OrderList> getServices() {
-    return [
-      OrderList(
-          "100SBI",
-          "assets/sbi_card_logo.png",
-          "Get 20% discount using SBI Credit Card",
-          "Use code 100SBI and get 20 % discount up to \$ 100 on orders above \$400",
-          [
-            "Offer valid only on SBI credit card",
-            "Offer valid on only Monday & Tuesday",
-            "Offer valid till Dec 31, 2019 23:59 PM"
-          ]),
-      OrderList(
-          "PAYZAPP125",
-          "assets/hdfc.png",
-          "Get 30% discount using SBI Credit Card",
-          "Use code PAYZAPP125 and get 30 % discount up to \$ 125 on orders \$199 and above",
-          [
-            "Offer valid only on SBI credit card",
-            "Offer valid on only Monday & Tuesday",
-            "Offer valid till Dec 31, 2019 23:59 PM"
-          ]),
-      OrderList(
-          "FCH30",
-          "assets/fch.png",
-          "Get 20% discount using SBI Credit Card",
-          "Use code FCH30 and get 20 % discount up to \$ 125 on orders \$199 and above",
-          [
-            "Offer valid only on SBI credit card",
-            "Offer valid on only Monday & Tuesday",
-            "Offer valid till Dec 31, 2019 23:59 PM"
-          ]),
-      OrderList(
-          "HSBC20",
-          "assets/hsbc.png",
-          "Get 30% discount using SBI Credit Card",
-          "Use code HSBC20 and get 30 % discount up to \$ 125 on orders \$199 and above",
-          [
-            "Offer valid only on SBI credit card",
-            "Offer valid on only Monday & Tuesday",
-            "Offer valid till Dec 31, 2019 23:59 PM"
-          ]),
-    ];
+    setState(() {
+      _isLoading = true;
+    });
+    var request = new MultipartRequest(
+        "GET", Uri.parse(api_url + "user/coupons/list"));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          List<OrderList> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new OrderList(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['name'],
+                  data['data'][i]['description'],
+                  data['data'][i]['code'],
+                  data['data'][i]['value'],
+                  data['data'][i]['type'],
+                  data['data'][i]['image'],
+                  data['data'][i]['for_new_user'],
+                  data['data'][i]['expires_on'],
+                  data['data'][i]['active'],
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at']));
+            }
+            setState(() {
+              serviceList = tempList;
+            });
+          }
+        }
+      });
+    });
   }
 }

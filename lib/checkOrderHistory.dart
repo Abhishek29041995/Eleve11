@@ -1,6 +1,14 @@
+import 'dart:convert';
+
 import 'package:eleve11/checkOrderHistoryDetails.dart';
+import 'package:eleve11/main.dart';
+import 'package:eleve11/modal/orders.dart';
+import 'package:eleve11/services/api_services.dart';
 import 'package:eleve11/widgets/dashed_line.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckOrderHistory extends StatefulWidget {
   @override
@@ -8,14 +16,25 @@ class CheckOrderHistory extends StatefulWidget {
 }
 
 class _CheckOrderHistory extends State<CheckOrderHistory> {
+  String acccessToken = "";
+  bool _isLoading = false;
+  List<Orders> orderList = new List();
+
   @override
   void initState() {
     super.initState();
+    checkIsLogin();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<Null> checkIsLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    acccessToken = prefs.getString("accessToken");
+    getServices();
   }
 
   @override
@@ -52,14 +71,9 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
         ),
       ),
       backgroundColor: Color(0xffF2F2F2),
-      body: Center(
-//        child: Padding(padding: EdgeInsets.all(5.0),
-          child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[bodyCard()],
-      )
-//        ),
-          ),
+      body: Stack(
+        children: _buildWidget(),
+      ),
     );
   }
 
@@ -71,25 +85,24 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
         },
         scrollDirection: Axis.vertical,
         shrinkWrap: true,
-        itemCount: 5,
+        itemCount: orderList.length,
         itemBuilder: (BuildContext context, int index) {
 //          final item = finalDepData[index];
 //          return tableRowDept(item);
-          return CardData();
+          return CardData(orderList[index]);
         },
       ),
     );
   }
 
-  CardData() {
+  CardData(Orders orderList) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: GestureDetector(
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => CheckOrderHistoryDetails()),
+            MaterialPageRoute(builder: (context) => CheckOrderHistoryDetails(orderList)),
           );
         },
         child: Container(
@@ -111,7 +124,7 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text("# BK1235656667",
+                      Text(orderList.booking_ref,
                           style: TextStyle(
                             fontFamily: 'Montserrat',
                             color: Colors.black,
@@ -121,9 +134,8 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                       SizedBox(
                         height: 5.0,
                       ),
-                      Text("Ordered On:12 Dec 2019",
-                          style:
-                          TextStyle(color: Colors.black, fontSize: 11)),
+                      Text("Ordered On:"+orderList.updated_at,
+                          style: TextStyle(color: Colors.black, fontSize: 11)),
                       SizedBox(height: 10.0),
                       Row(
                         children: <Widget>[
@@ -134,8 +146,9 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                                 shape: BoxShape.circle, color: Colors.red),
                           ),
                           SizedBox(width: 5.0),
-                          Text("Booking Date:12 Dec 2019" ,style:
-                              TextStyle(color: Colors.black, fontSize: 11)),
+                          Text("Booking Date:"+orderList.created_at,
+                              style:
+                                  TextStyle(color: Colors.black, fontSize: 11)),
                         ],
                       ),
                       Padding(
@@ -155,8 +168,9 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                                 shape: BoxShape.circle, color: Colors.green),
                           ),
                           SizedBox(width: 5.0),
-                          Text("Booking Date:12 Dec 2019" ,style:
-                          TextStyle(color: Colors.black, fontSize: 11)),
+                          Text("Booking Date:"+orderList.created_at,
+                              style:
+                                  TextStyle(color: Colors.black, fontSize: 11)),
                         ],
                       ),
                     ],
@@ -166,10 +180,11 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
               Flexible(
                 child: Column(
                   children: <Widget>[
-                    Text("\$80",
+                    Text("\$"+orderList.discounted_price,
                         style: TextStyle(
                           color: Colors.black,
-                          fontSize: 11,fontFamily: 'Montserrat',
+                          fontSize: 11,
+                          fontFamily: 'Montserrat',
                           fontWeight: FontWeight.bold,
                         )),
                     Padding(
@@ -189,39 +204,95 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
       ),
     );
   }
+
+  getServices() {
+    setState(() {
+      _isLoading = true;
+    });
+    var request = new MultipartRequest(
+        "GET", Uri.parse(api_url + "user/booking/history"));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        print(data);
+        if (data['code'] == 200) {
+          List<Orders> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new Orders(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['booking_ref'],
+                  data['data'][i]['user_id'],
+                  data['data'][i]['address_id'],
+                  data['data'][i]['service_id'],
+                  data['data'][i]['actual_price'],
+                  data['data'][i]['discount_value'],
+                  data['data'][i]['discount_type'],
+                  data['data'][i]['discounted_price'],
+                  data['data'][i]['user_lat'],
+                  data['data'][i]['user_lon'],
+                  data['data'][i]['status'],
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at'],
+                  data['data'][i]['service'],
+                  data['data'][i]['address']));
+            }
+            setState(() {
+              orderList = tempList;
+            });
+          }
+        }
+      });
+    });
+  }
+
+  List<Widget> _buildWidget() {
+    List<Widget> list = new List();
+    var mainView = Center(
+//        child: Padding(padding: EdgeInsets.all(5.0),
+        child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[bodyCard()],
+    )
+//        ),
+        );
+    list.add(mainView);
+    if (_isLoading) {
+      var modal = new Stack(
+        children: [
+          new Opacity(
+            opacity: 0.3,
+            child: const ModalBarrier(dismissible: false, color: Colors.grey),
+          ),
+          new Center(
+            child: SpinKitRotatingPlain(
+              itemBuilder: _customicon,
+            ),
+          ),
+        ],
+      );
+      list.add(modal);
+    }
+    return list;
+  }
+
+  Widget _customicon(BuildContext context, int index) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset("assets/imgs/logo.png"),
+      ),
+      decoration: new BoxDecoration(
+          color: Color(0xff170e50),
+          borderRadius: new BorderRadius.circular(5.0)),
+    );
+  }
 }
 
-//class MySeparator extends StatelessWidget {
-//  final double height;
-//  final Color color;
-//
-//  const MySeparator({this.height = 1, this.color = Colors.black});
-//
-//  @override
-//  Widget build(BuildContext context) {
-//    return LayoutBuilder(
-//      builder: (BuildContext context, BoxConstraints constraints) {
-//        final boxWidth = constraints.constrainWidth();
-//        final dashWidth = 10.0;
-//        final dashHeight = height;
-//        final dashCount = (boxWidth / (2 * dashWidth)).floor();
-//        return Flex(
-//          children: List.generate(dashCount, (_) {
-//            return SizedBox(
-//              width: dashWidth,
-//              height: dashHeight,
-//              child: DecoratedBox(
-//                decoration: BoxDecoration(color: color),
-//              ),
-//            );
-//          }),
-//          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//          direction: Axis.horizontal,
-//        );
-//      },
-//    );
-//  }
-//}
 class MySeparator extends StatelessWidget {
   final double width;
   final Color color;

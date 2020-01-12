@@ -10,8 +10,6 @@ import 'package:eleve11/widgets/expandable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:eleve11/modal/child_services.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,14 +17,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SelectService extends StatefulWidget {
   String selectedServiceCat;
   String type;
+  String address_id;
+  double latitude;
+  double longitude;
 
-  SelectService(String selectedServiceCat, String type) {
+  SelectService(String selectedServiceCat, String type, String address_id, double latitude,double longitude) {
     this.selectedServiceCat = selectedServiceCat;
     this.type = type;
+    this.address_id = address_id;
+    this.latitude = latitude;
+    this.longitude = longitude;
   }
 
   _SelectServiceState createState() =>
-      _SelectServiceState(this.selectedServiceCat, this.type);
+      _SelectServiceState(this.selectedServiceCat, this.type,this.address_id,this.latitude,this.longitude);
 }
 
 class _SelectServiceState extends State<SelectService> {
@@ -39,10 +43,15 @@ class _SelectServiceState extends State<SelectService> {
   bool _isLoading = true;
   String type;
   String price = "";
-
-  _SelectServiceState(String selectedServiceCat, String type) {
+  String address_id;
+  double latitude;
+  double longitude;
+  _SelectServiceState(String selectedServiceCat, String type, String address_id, double latitude, double longitude) {
     this.selectedServiceCat = selectedServiceCat;
     this.type = type;
+    this.address_id = address_id;
+    this.latitude = latitude;
+    this.longitude = longitude;
   }
 
   @override
@@ -252,6 +261,11 @@ class _SelectServiceState extends State<SelectService> {
                                   serviceList[index].isChecked =
                                       !serviceList[index].isChecked;
                                   if (x) {
+                                    if (type == 'SEDAN') {
+                                      price = serviceList[index].sedan_price;
+                                    } else {
+                                      price = serviceList[index].suv_price;
+                                    }
                                     for (var i = 0;
                                         i < serviceList.length;
                                         i++) {
@@ -322,7 +336,7 @@ class _SelectServiceState extends State<SelectService> {
                               builder: (context) => new OverViewOrder(
                                   serviceList
                                       .where((i) => i.isChecked == true)
-                                      .toList())));
+                                      .toList(),type,price,address_id,latitude.toString(),longitude.toString(),selectedServiceCat)));
                     },
                     textColor: Colors.white,
                     color: Color(0xff170e50),
@@ -349,7 +363,6 @@ class _SelectServiceState extends State<SelectService> {
       );
       list.add(modal);
     }
-    return list;
     return list;
   }
 
@@ -405,21 +418,5 @@ class _SelectServiceState extends State<SelectService> {
         }
       });
     });
-  }
-
-  _childList(List<ChildSerices> otherservices) {
-    return ListView.builder(
-        scrollDirection: Axis.vertical,
-        shrinkWrap: true,
-        itemCount: otherservices.length,
-        itemBuilder: (BuildContext ctxt, int index) {
-          return Padding(
-            padding: const EdgeInsets.only(left: 40, right: 30, top: 20),
-            child: Text(
-              otherservices[index].name,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-          );
-        });
   }
 }

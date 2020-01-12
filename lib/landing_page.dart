@@ -12,11 +12,14 @@ import 'package:eleve11/feedback.dart';
 import 'package:eleve11/login.dart';
 import 'package:eleve11/modal/Rides.dart';
 import 'package:eleve11/modal/locale.dart';
+import 'package:eleve11/modal/locations.dart';
 import 'package:eleve11/modal/service_new.dart';
 import 'package:eleve11/profile_design.dart';
 import 'package:eleve11/select_service.dart';
 import 'package:eleve11/services/api_services.dart';
+import 'package:eleve11/subscription.dart';
 import 'package:eleve11/utils/translations.dart';
+import 'package:eleve11/widgets/carousel_slider.dart';
 import 'package:eleve11/widgets/custom_radio.dart';
 import 'package:eleve11/offers_page.dart';
 import 'package:eleve11/widgets/searchMapPlaceWidget.dart';
@@ -26,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_swiper/flutter_swiper.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -44,10 +48,12 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPage extends State<LandingPage> {
   int currentIndex = 0;
+  int _current = 0;
+  String address_id = "";
   String acccessToken = "";
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   Completer<GoogleMapController> _controller = Completer();
-  LocationData currentLocation;
+  LocationData currentLocations;
   static final CameraPosition _kLake = CameraPosition(
       bearing: 192.8334901395799,
       target: LatLng(37.43296265331129, -122.08832357078792),
@@ -76,6 +82,7 @@ class _LandingPage extends State<LandingPage> {
   double _fabHeight;
   bool showfooter = true;
   List<Services> services = new List();
+  List<Locations> locations = new List();
   List<Rides> myRides = new List();
   ui.Image labelIcon;
   ui.Image markerImage;
@@ -101,7 +108,7 @@ class _LandingPage extends State<LandingPage> {
       }
     } catch (e) {
       print('ERROR:$e');
-      currentLocation = null;
+      currentLocations = null;
     }
   }
 
@@ -123,7 +130,9 @@ class _LandingPage extends State<LandingPage> {
     JsonCodec codec = new JsonCodec();
     userData = codec.decode(prefs.getString("userData"));
     acccessToken = prefs.getString("accessToken");
+    print(acccessToken);
     getServices();
+    getLocation();
     getMyRides();
   }
 
@@ -282,17 +291,6 @@ class _LandingPage extends State<LandingPage> {
                     new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                      leading: new Icon(
-                        Icons.info,
-                        color: Color(0xff170e50),
-                      ),
-                      title: new Text(
-                          Translations.of(context).text('about') + ' Eleve11'),
-                      onTap: () => _onListTileTap(context, ""),
-                    ),
-                    new ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
                       leading: new Icon(Icons.account_circle,
                           color: Color(0xff170e50)),
                       title: new Text(Translations.of(context).text('profile')),
@@ -341,9 +339,16 @@ class _LandingPage extends State<LandingPage> {
                           color: Color(0xff170e50)),
                       title: new Text(
                           Translations.of(context).text('promo_codes')),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "promo"),
                     ),
                     new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading:
+                          new Icon(Icons.subscriptions, color: Color(0xff170e50)),
+                      title: new Text(Translations.of(context).text('subscription')),
+                      onTap: () => _onListTileTap(context, "subscription"),
+                    ), new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
                       leading:
@@ -438,6 +443,17 @@ class _LandingPage extends State<LandingPage> {
                     new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+                      leading: new Icon(
+                        Icons.info,
+                        color: Color(0xff170e50),
+                      ),
+                      title: new Text(
+                          Translations.of(context).text('about') + ' Eleve11'),
+                      onTap: () => _onListTileTap(context, ""),
+                    ),
+                    new ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
                       leading: new Icon(Icons.new_releases,
                           color: Color(0xff170e50)),
                       title: new Text("App version"),
@@ -503,8 +519,14 @@ class _LandingPage extends State<LandingPage> {
       Navigator.push(context,
           new MaterialPageRoute(builder: (context) => new CheckOrderHistory()));
     } else if (from == "offers") {
+//      Navigator.push(context,
+//          new MaterialPageRoute(builder: (context) => new OffersPage()));
+    } else if (from == "promo") {
       Navigator.push(context,
           new MaterialPageRoute(builder: (context) => new OffersPage()));
+    } else if (from == "subscription") {
+      Navigator.push(context,
+          new MaterialPageRoute(builder: (context) => new SubscriptionPlans()));
     } else {
       showDialog<Null>(
         context: context,
@@ -568,50 +590,121 @@ class _LandingPage extends State<LandingPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.arrow_back_ios,
-                                      color: Colors.grey,
-                                      size: 14,
+                            locations.length > 0
+                                ? Expanded(
+                                    child: CarouselSlider(
+                                      height: 40,
+                                      aspectRatio: 2.0,
+                                      onPageChanged: (index) {
+                                        setState(() {
+                                          _current = index;
+                                          address_id = locations[index].id;
+                                        });
+                                      },
+                                      items: locations.map((i) {
+                                        return Builder(
+                                          builder: (BuildContext context) {
+                                            return Row(
+                                              mainAxisSize: MainAxisSize.max,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: <Widget>[
+                                                locations.indexOf(i) != _current
+                                                    ? IconButton(
+                                                        icon: Icon(
+                                                          Icons
+                                                              .arrow_forward_ios,
+                                                          color: Colors.grey,
+                                                          size: 14,
+                                                        ),
+                                                        onPressed: () {},
+                                                      )
+                                                    : SizedBox(
+                                                        height: 10,
+                                                      ),
+                                                Expanded(
+                                                  child: Center(
+                                                    child: Text(
+                                                      i.name,
+                                                      style: TextStyle(
+                                                          fontSize: 13,
+                                                          fontFamily:
+                                                              'Montserrat',
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                ),
+                                                locations.indexOf(i) != _current
+                                                    ? IconButton(
+                                                        icon: Icon(
+                                                          Icons.arrow_back_ios,
+                                                          color: Colors.grey,
+                                                          size: 14,
+                                                        ),
+                                                        onPressed: () {},
+                                                      )
+                                                    : SizedBox(
+                                                        height: 10,
+                                                      ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      }).toList(),
                                     ),
-                                    onPressed: () {},
-                                  ),
-                                  Text(
-                                    locationTitle,
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontFamily: 'Montserrat',
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Colors.grey,
-                                      size: 14,
+                                  )
+                                : Expanded(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: <Widget>[
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.arrow_back_ios,
+                                            color: Colors.grey,
+                                            size: 14,
+                                          ),
+                                          onPressed: () {},
+                                        ),
+                                        Text(
+                                          locationTitle,
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.arrow_forward_ios,
+                                            color: Colors.grey,
+                                            size: 14,
+                                          ),
+                                          onPressed: () {},
+                                        ),
+                                      ],
                                     ),
-                                    onPressed: () {},
                                   ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.add_circle,
-                                color: Color(0xff170e50),
-                                size: 24,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                    context,
-                                    new MaterialPageRoute(
-                                        builder: (context) =>
-                                            new AddLocation()));
-                              },
+                            Wrap(
+                              children: <Widget>[
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.add_circle,
+                                    color: Color(0xff170e50),
+                                    size: 24,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                            context,
+                                            new MaterialPageRoute(
+                                                builder: (context) =>
+                                                    new AddLocation()))
+                                        .then((onVal) {
+                                      getLocation();
+                                    });
+                                  },
+                                )
+                              ],
                             )
                           ],
                         ),
@@ -926,6 +1019,7 @@ class _LandingPage extends State<LandingPage> {
               LatLng(currentLocation.latitude, currentLocation.longitude)),
         ));
         setState(() {
+          currentLocations = currentLocation;
           _originLocation =
               LatLng(currentLocation.latitude, currentLocation.longitude);
           _destinationLocation = LatLng(20.2921956, 85.8392707);
@@ -997,6 +1091,47 @@ class _LandingPage extends State<LandingPage> {
     });
   }
 
+  getLocation() {
+    setState(() {
+      _isLoading = true;
+    });
+    var request =
+        new MultipartRequest("GET", Uri.parse(api_url + "user/address/list"));
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        print(data);
+        if (data['code'] == 200) {
+          List<Locations> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new Locations(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['user_id'],
+                  data['data'][i]['name'],
+                  data['data'][i]['house'],
+                  data['data'][i]['landmark'],
+                  data['data'][i]['address'],
+                  data['data'][i]['lat'],
+                  data['data'][i]['lon'],
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at']));
+            }
+            setState(() {
+              locations = tempList;
+              address_id = locations[0].id;
+              _current = 0;
+            });
+          }
+        }
+      });
+    });
+  }
+
   List<Rides> getMyRides() {
     setState(() {
       _isLoading = true;
@@ -1056,8 +1191,12 @@ class _LandingPage extends State<LandingPage> {
                       Navigator.push(
                           context,
                           new MaterialPageRoute(
-                              builder: (context) =>
-                                  new SelectService(selectedServiceCat,myRid.type)));
+                              builder: (context) => new SelectService(
+                                  selectedServiceCat,
+                                  myRid.type,
+                                  address_id,
+                                  currentLocations.latitude,
+                                  currentLocations.longitude)));
                     },
                     child: FadeInImage.assetNetwork(
                       placeholder: 'assets/imgs/placeholder.png',
@@ -1072,7 +1211,9 @@ class _LandingPage extends State<LandingPage> {
                         color: Colors.red,
                         size: 24,
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        deleteMyRides(myRid.id);
+                      },
                     ),
                   )
                 ],
@@ -1103,5 +1244,45 @@ class _LandingPage extends State<LandingPage> {
       ),
     );
     _scaffoldKey.currentState.showSnackBar(snackBar);
+  }
+
+  void deleteMyRides(String id) {
+    setState(() {
+      _isLoading = true;
+    });
+    var request =
+        new MultipartRequest("POST", Uri.parse(api_url + "user/deleteMyRides"));
+    request.fields['ride_id'] = id;
+    request.headers['Authorization'] = "Bearer $acccessToken";
+    commonMethod(request).then((onResponse) {
+      onResponse.stream.transform(utf8.decoder).listen((value) {
+        setState(() {
+          _isLoading = false;
+        });
+        Map data = json.decode(value);
+        if (data['code'] == 200) {
+          List<Rides> tempList = new List();
+          if (data['data'].length > 0) {
+            for (var i = 0; i < data['data'].length; i++) {
+              tempList.add(new Rides(
+                  data['data'][i]['id'].toString(),
+                  data['data'][i]['user_id'],
+                  data['data'][i]['car_model_id'],
+                  data['data'][i]['type'],
+                  data['data'][i]['created_at'],
+                  data['data'][i]['updated_at'],
+                  data['data'][i]['car_model']));
+            }
+            setState(() {
+              myRides = tempList;
+            });
+          } else {
+            setState(() {
+              myRides = tempList;
+            });
+          }
+        }
+      });
+    });
   }
 }
