@@ -33,7 +33,6 @@ dependencies:
   gender_selection: ^1.0.0
   image_picker: ^0.6.2+1
   image_cropper: ^1.1.0
-  video_player: ^0.10.3+3
   google_maps_flutter: ^0.5.21+12
   flutter_polyline_points: ^0.1.0
   http: ^0.12.0+2
@@ -47,10 +46,10 @@ dependencies:
   provider: ^3.2.0
   local_auth: ^0.6.1
   toast: ^0.1.5
-  flutter_widget_from_html: ^0.3.2
   flutter_staggered_animations: "^0.1.2"
-  clipboard_manager: ^0.0.4
-  flutter_swiper: ^1.1.6
+  flutter_facebook_login: ^3.0.0
+  url_launcher: ^5.0.3
+  flutter_html: ^0.11.1
 
 dev_dependencies:
   flutter_test:
@@ -75,15 +74,10 @@ flutter:
   assets:
     - assets/imgs/logo.png
     - assets/imgs/logo_water.png
-    - assets/imgs/car_rentals.jpg
     - assets/imgs/gifimage.gif
     - assets/imgs/courier2.gif
     - assets/imgs/courier1.gif
     - assets/imgs/car1.gif
-    - assets/imgs/iraq.png
-    - assets/imgs/asia.png
-    - assets/imgs/korek.png
-    - assets/imgs/zain.png
     - assets/imgs/otp-icon.png
     - assets/imgs/success.png
     - assets/imgs/delete.png
@@ -91,28 +85,17 @@ flutter:
     - assets/imgs/fastpay.png
     - assets/imgs/cash.png
     - assets/imgs/dslr-camera.png
-    - assets/imgs/banner.jpg
-    - assets/imgs/poster.jpg
-    - assets/imgs/photo1.png
-    - assets/imgs/poster2.jpg
     - assets/imgs/placeholder.png
     - assets/imgs/bio.svg
-    - assets/imgs/ford.svg
-    - assets/imgs/car-seat.svg
-    - assets/imgs/shower.svg
     - assets/imgs/drop.svg
-    - assets/imgs/carwash.svg
     - assets/imgs/facebook.svg
+    - assets/imgs/notification.svg
+    - assets/imgs/locations.svg
     - assets/imgs/map-marker.png
     - assets/imgs/gps.png
     - assets/imgs/map_user.png
-    - assets/sbi_card_logo.png
-    - assets/hsbc.png
-    - assets/hdfc.png
-    - assets/fch.png
     - assets/user.png
     - assets/invoice1.png
-    - assets/smart-car.png
     - assets/destination_map_marker.png
     - assets/driving_pin.png
     - locale/i18n_en.json

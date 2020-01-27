@@ -21,8 +21,13 @@ class OverViewOrder extends StatefulWidget {
   String selectedServiceCat;
   String type;
 
-  OverViewOrder(List<ServiceList> serviceList, String type, String price, String address_id,
-      String latitude, String longitude, String selectedServiceCat) {
+  OverViewOrder(List<ServiceList> serviceList,
+      String type,
+      String price,
+      String address_id,
+      String latitude,
+      String longitude,
+      String selectedServiceCat) {
     this.serviceList = serviceList;
     this.type = type;
     this.price = price;
@@ -32,14 +37,15 @@ class OverViewOrder extends StatefulWidget {
     this.selectedServiceCat = selectedServiceCat;
   }
 
-  _OverViewOrderState createState() => _OverViewOrderState(
-      this.serviceList,
-      this.type,
-      this.price,
-      this.address_id,
-      this.latitude,
-      this.longitude,
-      this.selectedServiceCat);
+  _OverViewOrderState createState() =>
+      _OverViewOrderState(
+          this.serviceList,
+          this.type,
+          this.price,
+          this.address_id,
+          this.latitude,
+          this.longitude,
+          this.selectedServiceCat);
 }
 
 class _OverViewOrderState extends State<OverViewOrder> {
@@ -56,15 +62,15 @@ class _OverViewOrderState extends State<OverViewOrder> {
   Map userData = null;
   bool _isLoading = false;
   TextEditingController _promoCodecontroller = new TextEditingController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   int textLength = 0;
   bool couponapplied = false;
   String msg = "";
-  String discountValue = "";
-  String discountType = "";
+  String discountValue = "0";
+  String discountType = "0";
   String discountedPrice = "";
 
-  _OverViewOrderState(
-      List<ServiceList> serviceList,
+  _OverViewOrderState(List<ServiceList> serviceList,
       String type,
       String price,
       String address_id,
@@ -100,6 +106,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
     // TODO: implement build
     return new SafeArea(
       child: Scaffold(
+        key: _scaffoldKey,
         body: Stack(
           children: _buildWidget(context),
         ),
@@ -141,7 +148,8 @@ class _OverViewOrderState extends State<OverViewOrder> {
     var servicelist = Padding(
       padding: EdgeInsets.only(top: 80),
       child: ListView.separated(
-          separatorBuilder: (context, index) => Padding(
+          separatorBuilder: (context, index) =>
+              Padding(
                 padding: const EdgeInsets.only(left: 30, right: 10),
                 child: Divider(
                   color: Colors.black12,
@@ -172,7 +180,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
                                   fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              discountType == 'SEDAN'
+                              type == 'SEDAN'
                                   ? serviceList[index].sedan_price
                                   : serviceList[index].suv_price,
                               style: TextStyle(fontSize: 13),
@@ -230,88 +238,88 @@ class _OverViewOrderState extends State<OverViewOrder> {
                 ),
                 textLength > 0
                     ? Wrap(
-                        children: <Widget>[
-                          GestureDetector(
-                            onTap: () {
-                              couponCheck();
-                            },
-                            child: Text(
-                              "Apply",
-                              style: TextStyle(
-                                  fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Colors.deepOrangeAccent),
-                            ),
-                          )
-                        ],
-                      )
+                  children: <Widget>[
+                    GestureDetector(
+                      onTap: () {
+                        couponCheck();
+                      },
+                      child: Text(
+                        "Apply",
+                        style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.deepOrangeAccent),
+                      ),
+                    )
+                  ],
+                )
                     : Text('')
               ],
             ),
           ),
           couponapplied
               ? Padding(
-                  padding:
-                      const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
-                  child: Container(
-                    child: Column(
+            padding:
+            const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
+            child: Container(
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text("Original Price",
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat', fontSize: 12)),
-                              Text(originalPrice,
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12))
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text("Discount",
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat', fontSize: 12)),
-                              Text(discountedPrice,
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12))
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text("Amount to pay",
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat', fontSize: 12)),
-                              Text(price,
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12))
-                            ],
-                          ),
-                        )
+                        Text("Original Price",
+                            style: TextStyle(
+                                fontFamily: 'Montserrat', fontSize: 12)),
+                        Text(originalPrice,
+                            style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12))
                       ],
                     ),
                   ),
-                )
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text("Discount",
+                            style: TextStyle(
+                                fontFamily: 'Montserrat', fontSize: 12)),
+                        Text(discountedPrice,
+                            style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12))
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text("Amount to pay",
+                            style: TextStyle(
+                                fontFamily: 'Montserrat', fontSize: 12)),
+                        Text(price,
+                            style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12))
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          )
               : SizedBox(
-                  width: 10,
-                ),
+            width: 10,
+          ),
           Padding(
             padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 20),
             child: Row(
@@ -332,12 +340,12 @@ class _OverViewOrderState extends State<OverViewOrder> {
                       ),
                       (isCash != null && isCash == "1")
                           ? CircularCheckBox(
-                              value: true,
-                              activeColor: Color(0xff170e50),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.padded,
-                              onChanged: (bool x) {},
-                            )
+                        value: true,
+                        activeColor: Color(0xff170e50),
+                        materialTapTargetSize:
+                        MaterialTapTargetSize.padded,
+                        onChanged: (bool x) {},
+                      )
                           : SizedBox(),
                     ],
                   ),
@@ -373,12 +381,12 @@ class _OverViewOrderState extends State<OverViewOrder> {
                       ),
                       (isCash != null && isCash == "2")
                           ? CircularCheckBox(
-                              value: true,
-                              activeColor: Color(0xff170e50),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.padded,
-                              onChanged: (bool x) {},
-                            )
+                        value: true,
+                        activeColor: Color(0xff170e50),
+                        materialTapTargetSize:
+                        MaterialTapTargetSize.padded,
+                        onChanged: (bool x) {},
+                      )
                           : SizedBox(),
                     ],
                   ),
@@ -411,14 +419,18 @@ class _OverViewOrderState extends State<OverViewOrder> {
               )),
           Padding(
             padding:
-                const EdgeInsets.only(left: 20, right: 20, bottom: 10, top: 20),
+            const EdgeInsets.only(left: 20, right: 20, bottom: 10, top: 20),
             child: ConstrainedBox(
                 constraints: const BoxConstraints(
                     minWidth: double.infinity, minHeight: 35.0),
                 child: RaisedButton(
                     child: new Text(Translations.of(context).text('continue')),
                     onPressed: () {
-                      bookingAdd();
+                      if (isCash == '0') {
+                        _displaySnackBar('Choose payment mode');
+                      } else {
+                        bookingAdd();
+                      }
                     },
                     textColor: Colors.white,
                     color: Color(0xff170e50),
@@ -444,6 +456,20 @@ class _OverViewOrderState extends State<OverViewOrder> {
       list.add(modal);
     }
     return list;
+  }
+
+  _displaySnackBar(msg) {
+    final snackBar = new SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.black,
+      action: SnackBarAction(
+        label: 'OK',
+        onPressed: () {
+          // Some code to undo the change!
+        },
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
   }
 
   Widget _customicon(BuildContext context, int index) {
@@ -514,13 +540,13 @@ class _OverViewOrderState extends State<OverViewOrder> {
                                   context,
                                   new MaterialPageRoute(
                                       builder: (context) =>
-                                          new ShowDirections()));
+                                      new ShowDirections()));
                             },
                             textColor: Colors.white,
                             color: Color(0xff170e50),
                             shape: new RoundedRectangleBorder(
                                 borderRadius:
-                                    new BorderRadius.circular(30.0)))),
+                                new BorderRadius.circular(30.0)))),
                   )
                 ],
               ),
@@ -534,7 +560,7 @@ class _OverViewOrderState extends State<OverViewOrder> {
       _isLoading = true;
     });
     var request =
-        new MultipartRequest("POST", Uri.parse(api_url + "user/coupon/check"));
+    new MultipartRequest("POST", Uri.parse(api_url + "user/coupon/check"));
     request.fields['code'] = _promoCodecontroller.text;
     request.headers['Authorization'] = "Bearer $acccessToken";
     commonMethod(request).then((onResponse) {
@@ -542,35 +568,40 @@ class _OverViewOrderState extends State<OverViewOrder> {
         setState(() {
           _isLoading = false;
         });
-        Map data = json.decode(value);
-        if (data['code'] == 200) {
-          setState(() {
-            couponapplied = true;
-            if (data['coupon']['type'] == 'PERCENTAGE') {
-              price = (double.parse(originalPrice) -
-                      double.parse(originalPrice) *
-                          (double.parse(data['coupon']['value']) / 100))
-                  .toStringAsFixed(2);
-              discountedPrice = (double.parse(originalPrice) *
-                      (double.parse(data['coupon']['value']) / 100))
-                  .toStringAsFixed(2);
-            } else {
-              price = (double.parse(originalPrice) -
-                      double.parse(data['coupon']['value']))
-                  .toStringAsFixed(2);
-              discountedPrice =
-                  double.parse(data['coupon']['value']).toStringAsFixed(2);
-            }
-            discountValue = data['coupon']['value'];
-            discountType = data['coupon']['type'];
-          });
-        } else {
-          setState(() {
-            couponapplied = false;
-            msg = data['message'];
-          });
+        try {
+          Map data = json.decode(value);
+          if (data['code'] == 200) {
+            setState(() {
+              couponapplied = true;
+              if (data['coupon']['type'] == 'PERCENTAGE') {
+                price = (double.parse(originalPrice) -
+                    double.parse(originalPrice) *
+                        (double.parse(data['coupon']['value']) / 100))
+                    .toStringAsFixed(2);
+                discountedPrice = (double.parse(originalPrice) *
+                    (double.parse(data['coupon']['value']) / 100))
+                    .toStringAsFixed(2);
+              } else {
+                price = (double.parse(originalPrice) -
+                    double.parse(data['coupon']['value']))
+                    .toStringAsFixed(2);
+                discountedPrice =
+                    double.parse(data['coupon']['value']).toStringAsFixed(2);
+              }
+              discountValue = data['coupon']['value'];
+              discountType = data['coupon']['type'];
+            });
+          } else {
+            setState(() {
+              couponapplied = false;
+              msg = data['message'];
+            });
+          }
+        } catch (onError) {
+          _displaySnackBar(Translations.of(context).text('server_error'));
         }
-      });
+      }).onError((err) =>
+      {_displaySnackBar(Translations.of(context).text('server_error'))});
     });
   }
 
@@ -578,37 +609,40 @@ class _OverViewOrderState extends State<OverViewOrder> {
     setState(() {
       _isLoading = true;
     });
-    print(address_id);
-    print(selectedServiceCat);
-    print(originalPrice);
-    print(discountValue);
-    print(discountType);
-    print(price);
-    print(latitude);
-    print(longitude);
     var request =
-        new MultipartRequest("POST", Uri.parse(api_url + "user/booking/add"));
+    new MultipartRequest("POST", Uri.parse(api_url + "user/booking/add"));
     request.fields['address_id'] = address_id;
     request.fields['service_id'] = selectedServiceCat;
     request.fields['actual_price'] = originalPrice;
+    request.fields['payment_type'] = isCash == '1' ? "FAST PAY" : "COD";
     request.fields['discount_value'] = discountValue;
     request.fields['discount_type'] = discountType;
     request.fields['discounted_price'] = price;
     request.fields['user_lat'] = latitude;
     request.fields['user_lon'] = longitude;
+    request.fields['car_type'] = type;
     request.headers['Authorization'] = "Bearer $acccessToken";
     commonMethod(request).then((onResponse) {
       onResponse.stream.transform(utf8.decoder).listen((value) {
         setState(() {
           _isLoading = false;
         });
-        Map data = json.decode(value);
-        presentToast(data['message'], context, 0);
-        if (data['code'] == 200) {
-          showSucessDialog(data['data']);
-        } else {
+        try {
+          Map data = json.decode(value);
           presentToast(data['message'], context, 0);
+          if (data['code'] == 200) {
+            showSucessDialog(data['data']);
+          } else {
+            presentToast(data['message'], context, 0);
+          }
+        } catch (onError) {
+          print(onError);
+          _displaySnackBar(Translations.of(context).text('server_error'));
         }
+      }).onError((err) =>
+      {
+        print("11111111111111111"),
+        _displaySnackBar(Translations.of(context).text('server_error'))
       });
     });
   }

@@ -40,6 +40,7 @@ class _AddLocationState extends State<AddLocation> {
   TextEditingController _address1controller = new TextEditingController();
   TextEditingController _address2controller = new TextEditingController();
   Map userData = null;
+
   @override
   void initState() {
     _getLocation();
@@ -47,12 +48,14 @@ class _AddLocationState extends State<AddLocation> {
     checkIsLogin();
     super.initState();
   }
+
   Future<Null> checkIsLogin() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     JsonCodec codec = new JsonCodec();
     userData = codec.decode(prefs.getString("userData"));
     acccessToken = prefs.getString("accessToken");
   }
+
   Future _getLocation() async {
     try {
       if (location.serviceEnabled() == true) {
@@ -224,9 +227,9 @@ class _AddLocationState extends State<AddLocation> {
                 child: RaisedButton(
                     child: new Text(Translations.of(context).text('confirm')),
                     onPressed: () {
-                      if(_address1controller.text!='') {
+                      if (_address1controller.text != '') {
                         addMyLocation();
-                      }else{
+                      } else {
                         _displaySnackBar('Enter House/Flat/Block No.');
                       }
                     },
@@ -258,6 +261,7 @@ class _AddLocationState extends State<AddLocation> {
 
     return list;
   }
+
   Widget _customicon(BuildContext context, int index) {
     return Container(
       child: Padding(
@@ -283,6 +287,7 @@ class _AddLocationState extends State<AddLocation> {
     );
     _scaffoldKey.currentState.showSnackBar(snackBar);
   }
+
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
@@ -297,11 +302,13 @@ class _AddLocationState extends State<AddLocation> {
     myIcon = BitmapDescriptor.fromBytes(
         await getBytesFromAsset('assets/imgs/gps.png', 100));
   }
+
   addMyLocation() {
     setState(() {
       _isLoading = true;
     });
-    var request = new MultipartRequest("POST", Uri.parse(api_url + "user/address/add"));
+    var request =
+        new MultipartRequest("POST", Uri.parse(api_url + "user/address/add"));
     request.fields['lat'] = lattitude;
     request.fields['lon'] = longitude;
     request.fields['address'] = fulladdress;

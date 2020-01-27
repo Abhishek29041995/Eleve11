@@ -43,5 +43,10 @@
   "settings": "ضبط",
   "faq": "أسئلة وأجوبة",
   "contacts": "اتصل بنا",
-  "subscription": "الإشتراك"
+  "subscription": "الإشتراك",
+  "change_language": "تغيير اللغة",
+  "english": "الإنجليزية",
+  "arabic": "عربى",
+  "kurdish": "كردي (سوراني)",
+  "server_error": "سەمثينگ وێنت رۆنگ پلييز تراى گێين لێيتە"
 }

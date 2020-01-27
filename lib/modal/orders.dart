@@ -1,3 +1,5 @@
+import 'package:eleve11/modal/booking_track.dart';
+
 class Orders {
   String _id;
   String _booking_ref;
@@ -7,6 +9,7 @@ class Orders {
   String _actual_price;
   String _discount_value;
   String _discount_type;
+  String _payment_type;
   String _discounted_price;
   String _user_lat;
   String _user_lon;
@@ -15,6 +18,22 @@ class Orders {
   String _updated_at;
   Map _service;
   Map _address;
+  Map _worker;
+  List<BookingTrack> _booking_progress;
+
+
+  String get payment_type => _payment_type;
+
+  set payment_type(String value) {
+    _payment_type = value;
+  }
+
+
+  List<BookingTrack> get booking_progress => _booking_progress;
+
+  set booking_progress(List<BookingTrack> value) {
+    _booking_progress = value;
+  }
 
   Orders(
       this._id,
@@ -25,6 +44,7 @@ class Orders {
       this._actual_price,
       this._discount_value,
       this._discount_type,
+      this._payment_type,
       this._discounted_price,
       this._user_lat,
       this._user_lon,
@@ -32,9 +52,16 @@ class Orders {
       this._created_at,
       this._updated_at,
       this._service,
-      this._address);
+      this._address,
+      this._worker,this._booking_progress);
 
   Map get address => _address;
+
+  Map get worker => _worker;
+
+  set worker(Map value) {
+    _worker = value;
+  }
 
   set address(Map value) {
     _address = value;

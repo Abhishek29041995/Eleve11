@@ -355,6 +355,7 @@ class _SignUp extends State<SignUp>
                             setState(() {
                               _isLoading = false;
                             });
+                            try{
                             Map data = json.decode(value);
                             print(data);
                             presentToast(data['message'], context, 0);
@@ -368,7 +369,11 @@ class _SignUp extends State<SignUp>
                                 (Route<dynamic> route) => false,
                               );
                             }
-                          });
+                            } catch (onError) {
+                              _displaySnackBar(Translations.of(context).text('server_error'));
+                            }
+                          }).onError((err) =>
+                          {_displaySnackBar(Translations.of(context).text('server_error'))});
                         });
                       }
                     },

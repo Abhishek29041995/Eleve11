@@ -1,7 +1,9 @@
 import 'package:eleve11/modal/orders.dart';
+import 'package:eleve11/track_history.dart';
+import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/dashed_line.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:flutter_html/flutter_html.dart';
 
 class CheckOrderHistoryDetails extends StatefulWidget {
   Orders orderList;
@@ -94,13 +96,17 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                           ),
                           Padding(
                             padding: EdgeInsets.fromLTRB(10, 10, 0, 5),
-                            child: Text(orderList.service['name']),
+                            child: Text(
+                              orderList.service['name'],
+                              style: TextStyle(
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
                           ),
                           Padding(
-                            padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                            child: HtmlWidget(
-                              orderList.service['description'],
-                              webView: true,
+                            padding: EdgeInsets.fromLTRB(15, 0, 0, 10),
+                            child: Html(
+                              data: orderList.service['description'],
                             ),
                           )
                         ],
@@ -158,7 +164,18 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                             ),
                           )
                         ],
-                      ))))
+                      )))),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: new RaisedButton(
+              child: new Text(Translations.of(context).text('cancel')),
+              textColor: Colors.white,
+              color: Colors.red,
+              onPressed: () {},
+              shape: new RoundedRectangleBorder(
+                  borderRadius: new BorderRadius.circular(20.0)),
+            ),
+          )
         ],
       )
 //        ),
@@ -196,29 +213,47 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                               children: <Widget>[
                                 Padding(
                                   padding: EdgeInsets.all(10),
-                                  child: Image(
-                                      image: AssetImage('assets/user.png'),
-                                      width:
-                                          MediaQuery.of(context).size.width / 4,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              7,
-                                      fit: BoxFit.fitHeight),
+                                  child: new ClipRRect(
+                                    borderRadius:
+                                        new BorderRadius.circular(100),
+                                    child: Stack(
+                                      children: <Widget>[
+                                        GestureDetector(
+                                          onTap: () {
+//                                Navigator.push(
+//                                    context,
+//                                    new MaterialPageRoute(
+//                                        builder: (context) => new SelectService()));
+                                          },
+                                          child: FadeInImage.assetNetwork(
+                                            placeholder: 'assets/imgs/user.png',
+                                            image: orderList.worker['avatar'],
+                                            fit: BoxFit.cover,
+                                            height: 70,
+                                            width: 70,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    new Text("John Rocks",
+                                    new Text(orderList.worker['name'],
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat',
                                             color: Colors.black,
                                             fontSize: 20)),
                                     SizedBox(
                                       height: 5.0,
                                     ),
-                                    new Text("12 Dec 2019 ",
+                                    new Text(orderList.worker['mobile'],
                                         style: TextStyle(
-                                            color: Colors.black, fontSize: 16)),
+                                            fontFamily: 'Montserrat',
+                                            color: Colors.black,
+                                            fontSize: 13)),
                                   ],
                                 ),
                               ],
@@ -235,31 +270,62 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                         ),
                         Divider(),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Padding(
-                              padding: EdgeInsets.all(10),
-                              child: Image(
-                                  image: AssetImage('assets/invoice1.png'),
-                                  width: MediaQuery.of(context).size.width / 10,
-                                  height:
-                                      MediaQuery.of(context).size.height / 20,
-                                  fit: BoxFit.fitHeight),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Wrap(
                               children: <Widget>[
-                                new Text("Reference Number:",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                        fontSize: 16)),
-                                SizedBox(
-                                  height: 5.0,
+                                Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Image(
+                                      image: AssetImage('assets/invoice1.png'),
+                                      width: MediaQuery.of(context).size.width /
+                                          10,
+                                      height:
+                                          MediaQuery.of(context).size.height /
+                                              20,
+                                      fit: BoxFit.fitHeight),
                                 ),
-                                new Text(orderList.booking_ref,
-                                    style: TextStyle(
-                                        color: Colors.black, fontSize: 14)),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    new Text("Reference Number:",
+                                        style: TextStyle(
+                                            fontFamily: 'Montserrat',
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                            fontSize: 16)),
+                                    SizedBox(
+                                      height: 5.0,
+                                    ),
+                                    new Text(orderList.booking_ref,
+                                        style: TextStyle(
+                                            fontFamily: 'Montserrat',
+                                            color: Colors.black,
+                                            fontSize: 14)),
+                                  ],
+                                ),
                               ],
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => TrackHistory(orderList.booking_progress)),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Track",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Colors.deepOrangeAccent),
+                                ),
+                              ),
                             )
                           ],
                         ),
@@ -281,7 +347,9 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                                   SizedBox(width: 5.0),
                                   Text("Booking Date:" + orderList.created_at,
                                       style: TextStyle(
-                                          color: Colors.black, fontSize: 14)),
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.black,
+                                          fontSize: 14)),
                                 ],
                               ),
                               Padding(
@@ -304,7 +372,9 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                                   SizedBox(width: 5.0),
                                   Text("Booking Date:" + orderList.created_at,
                                       style: TextStyle(
-                                          color: Colors.black, fontSize: 14)),
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.black,
+                                          fontSize: 14)),
                                 ],
                               ),
                             ],
@@ -322,6 +392,7 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                                 children: <Widget>[
                                   new Text("Ordered On:",
                                       style: TextStyle(
+                                        fontFamily: 'Montserrat',
                                         color: Colors.black,
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -331,39 +402,115 @@ class _CheckOrderHistoryDetails extends State<CheckOrderHistoryDetails> {
                                   ),
                                   new Text(orderList.updated_at,
                                       style: TextStyle(
-                                          color: Colors.black, fontSize: 14)),
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.black,
+                                          fontSize: 14)),
                                 ],
                               ),
                             )
                           ],
                         ),
                         Divider(),
-                        Row(
-                          children: <Widget>[
-                            Padding(
-                              padding: EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  new Text("Price:",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      )),
-                                  SizedBox(
-                                    height: 5.0,
+                        Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Container(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                new Text("Pricing Details",
+                                    style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    )),
+                                Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Text("Original Price",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontSize: 12)),
+                                      Text(orderList.actual_price,
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12))
+                                    ],
                                   ),
-                                  new Text(orderList.discounted_price,
-                                      style: TextStyle(
-                                          color: Colors.black, fontSize: 14)),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Text("Discount",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontSize: 12)),
+                                      Text("- " + getDiscountPrice(orderList),
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                              fontSize: 12))
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Text(
+                                          orderList.payment_type == 'COD'
+                                              ? "Amount to pay"
+                                              : "Amount Paid",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontSize: 12)),
+                                      Text(getFinalPrice(orderList),
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12))
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                        )
                       ],
                     ))));
+  }
+
+  String getDiscountPrice(Orders orderList) {
+    if (orderList.discount_type == 'PERCENTAGE') {
+      return (double.parse(orderList.actual_price) *
+              (double.parse(orderList.discount_value) / 100))
+          .toStringAsFixed(2);
+    } else {
+      return double.parse(orderList.discount_value).toStringAsFixed(2);
+    }
+  }
+
+  String getFinalPrice(Orders orderList) {
+    if (orderList.discount_type == 'PERCENTAGE') {
+      return (double.parse(orderList.actual_price) -
+              double.parse(orderList.actual_price) *
+                  (double.parse(orderList.discount_value) / 100))
+          .toStringAsFixed(2);
+    } else {
+      return (double.parse(orderList.actual_price) -
+              double.parse(orderList.discount_value))
+          .toStringAsFixed(2);
+    }
   }
 }
 

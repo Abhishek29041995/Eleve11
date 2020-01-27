@@ -166,7 +166,7 @@ class CustomAppBar extends StatelessWidget with PreferredSizeWidget {
                       height: 16,
                     ),
                     Text(
-                      "Milan Short",
+                      userData['name'],
                       style: TextStyle(color: Colors.white, fontSize: 20),
                     )
                   ],

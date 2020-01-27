@@ -43,5 +43,10 @@
   "settings": "Setting",
   "faq": "FAQs",
   "contacts": "Contact Us",
-  "subscription": "Subscribe"
+  "subscription": "Subscribe",
+  "change_language": "Change Language",
+  "english": "English",
+  "arabic": "Arabic",
+  "kurdish": "Kurdish(Sorani)",
+  "server_error": "Something went wrong.Please try gain later"
 }

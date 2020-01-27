@@ -9,8 +9,8 @@ import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/expandable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -280,9 +280,9 @@ class _SelectServiceState extends State<SelectService> {
                           ],
                         ),
                       ),
-                      HtmlWidget(
-                        serviceList[index].description,
-                        webView: true,
+                      Html(
+                        data:serviceList[index].description,
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                       ),
 //                      _childList(serviceList[index].otherservices),
                     ]),

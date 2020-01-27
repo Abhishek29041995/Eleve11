@@ -1,19 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:country_pickers/country.dart';
 import 'package:country_pickers/country_pickers.dart';
 import 'package:eleve11/landing_page.dart';
 import 'package:eleve11/otp.dart';
 import 'package:eleve11/services/api_services.dart';
-import 'package:eleve11/services/local_authentication_service.dart';
-import 'package:eleve11/services/service_locator.dart';
 import 'package:eleve11/utils/translations.dart';
-import 'package:eleve11/widgets/wavy_design.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -33,6 +30,42 @@ class _LoginSate extends State<LoginPage> {
       CountryPickerUtils.getCountryByPhoneCode('91');
   bool _canCheckBiometrics = false;
   var _ScaffoldStateKey = new GlobalKey<ScaffoldState>();
+  bool _isLoggedIn = false;
+  Map userProfile;
+  final facebookLogin = FacebookLogin();
+
+  _loginWithFB() async {
+    final result = await facebookLogin.logIn(['email']);
+
+    switch (result.status) {
+      case FacebookLoginStatus.loggedIn:
+        final token = result.accessToken.token;
+        final graphResponse = await get(
+            'https://graph.facebook.com/v2.12/me?fields=name,picture,email&access_token=${token}');
+        final profile = jsonDecode(graphResponse.body);
+        print(profile);
+        setState(() {
+          userProfile = profile;
+          _isLoggedIn = true;
+        });
+        break;
+
+      case FacebookLoginStatus.cancelledByUser:
+        setState(() => _isLoggedIn = false);
+        break;
+      case FacebookLoginStatus.error:
+        setState(() => _isLoggedIn = false);
+        break;
+    }
+  }
+
+  _logout() {
+    facebookLogin.logOut();
+    if (!mounted) return;
+    setState(() {
+      _isLoggedIn = false;
+    });
+  }
 
   Future<void> _authenticate() async {
     bool authenticated = false;
@@ -62,6 +95,7 @@ class _LoginSate extends State<LoginPage> {
     checkIsLogin();
     _checkBiometrics();
   }
+
   Future<Null> checkIsLogin() async {
     String _token = "";
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -70,32 +104,31 @@ class _LoginSate extends State<LoginPage> {
       //replace it with the login page
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-            builder: (context) => new LandingPage()),
-            (Route<dynamic> route) => false,
+        MaterialPageRoute(builder: (context) => new LandingPage()),
+        (Route<dynamic> route) => false,
       );
       //your home page is loaded
     } else {
       print("not logged in.");
     }
   }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return WillPopScope(
       onWillPop: _onDeviceBack,
-      child: SafeArea(
-        child: Scaffold(
-          key: _ScaffoldStateKey,
-          body: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/imgs/logo_water.png"),
-                  fit: BoxFit.cover,
-                ),
+      child: Scaffold(
+        resizeToAvoidBottomPadding: true,
+        key: _ScaffoldStateKey,
+        body: Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/imgs/logo_water.png"),
+                fit: BoxFit.cover,
               ),
-              child: Stack(children: _buildForm(context))),
-        ),
+            ),
+            child: Stack(children: _buildForm(context))),
       ),
     );
   }
@@ -114,154 +147,159 @@ class _LoginSate extends State<LoginPage> {
     );
     var footerView = Padding(
       padding: EdgeInsets.fromLTRB(5, 0, 5, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-            child: Text(
-              "LET'S GET STARTED",
-              style: TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xff170e50)),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+              child: Text(
+                "LET'S GET STARTED",
+                style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Color(0xff170e50)),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-            child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              SizedBox(width: 8.0),
-              RaisedButton.icon(
-                onPressed: _openCountryPickerDialog,
-                elevation: 0.0,
-                shape: new RoundedRectangleBorder(
-                  borderRadius: new BorderRadius.circular(5.0),
-                ),
-                color: Colors.transparent,
-                icon: SizedBox(
-                  width: 25,
-                  height: 20,
-                  child: CountryPickerUtils.getDefaultFlagImage(
-                      _selectedDialogCountry),
-                ),
-                label: Text(
-                  "+${_selectedDialogCountry.phoneCode}",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  maxLength: 10,
-                  controller: _controller,
-                  style: TextStyle(fontSize: 13.0),
-                  decoration: new InputDecoration(
-                    counterStyle: TextStyle(
-                      height: double.minPositive,
-                    ),
-                    counterText: "",
-                    hintText: Translations.of(context).text('enter_mobile'),
-                    hintStyle: TextStyle(fontSize: 13),
-                    fillColor: Colors.white,
-                    border: InputBorder.none,
-                    //fillColor: Colors.green
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+              child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                SizedBox(width: 8.0),
+                RaisedButton.icon(
+                  onPressed: _openCountryPickerDialog,
+                  elevation: 0.0,
+                  shape: new RoundedRectangleBorder(
+                    borderRadius: new BorderRadius.circular(5.0),
                   ),
-                  keyboardType: TextInputType.phone,
+                  color: Colors.transparent,
+                  icon: SizedBox(
+                    width: 25,
+                    height: 20,
+                    child: CountryPickerUtils.getDefaultFlagImage(
+                        _selectedDialogCountry),
+                  ),
+                  label: Text(
+                    "+${_selectedDialogCountry.phoneCode}",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
                 ),
-              ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 16.0),
-            child: new Divider(),
-          ),
-          SizedBox(
-            height: 20,
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                    minWidth: double.infinity, minHeight: 45.0),
-                child: RaisedButton(
-                    child: new Text(Translations.of(context).text('login')),
-                    onPressed: () {
-                      if (_controller.text.length < 10) {
-                        _displaySnackBar("Enter valid mobile number");
-                      } else {
-                        setState(() {
-                          _isLoading = true;
-                        });
-                        var request = new MultipartRequest(
-                            "POST", Uri.parse(api_url + "user/login"));
-                        request.fields['mobile'] = _controller.text;
-                        commonMethod(request).then((onResponse) {
-                          onResponse.stream
-                              .transform(utf8.decoder)
-                              .listen((value) {
-                            setState(() {
-                              _isLoading = false;
-                            });
-                            Map data = json.decode(value);
-                            presentToast(data['message'], context, 0);
-                            if (data['code'] == 200) {
-                              Navigator.of(context).push(new MaterialPageRoute(
-                                  builder: (context) =>
-                                      new OtpPage(_controller.text,_selectedDialogCountry.phoneCode)));
-                            }
+                Expanded(
+                  child: TextField(
+                    maxLength: 10,
+                    controller: _controller,
+                    style: TextStyle(fontSize: 13.0),
+                    decoration: new InputDecoration(
+                      counterStyle: TextStyle(
+                        height: double.minPositive,
+                      ),
+                      counterText: "",
+                      hintText: Translations.of(context).text('enter_mobile'),
+                      hintStyle: TextStyle(fontSize: 13),
+                      fillColor: Colors.white,
+                      border: InputBorder.none,
+                      //fillColor: Colors.green
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+              child: new Divider(),
+            ),
+            SizedBox(
+              height: 20,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                      minWidth: double.infinity, minHeight: 45.0),
+                  child: RaisedButton(
+                      child: new Text(Translations.of(context).text('login')),
+                      onPressed: () {
+                        if (_controller.text.length < 10) {
+                          _displaySnackBar("Enter valid mobile number");
+                        } else {
+                          setState(() {
+                            _isLoading = true;
                           });
-                        });
-                      }
-                    },
-                    textColor: Colors.white,
-                    color: Color(0xff170e50),
-                    shape: new RoundedRectangleBorder(
-                        borderRadius: new BorderRadius.circular(30.0)))),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _canCheckBiometrics
-                  ? Column(
-                      children: <Widget>[
-                        Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: GestureDetector(
-                              child: new SvgPicture.asset(
-                                "assets/imgs/bio.svg",
-                                allowDrawingOutsideViewBox: true,
-                                height: 40,
-                                width: 30,
-                              ),
-                              onTap: () {
-                                _authenticate();
-                              },
-                            )),
-                      ],
-                    )
-                  : SizedBox(),
-              Column(
-                children: <Widget>[
-                  Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: GestureDetector(
-                        child: new SvgPicture.asset(
-                          "assets/imgs/facebook.svg",
-                          allowDrawingOutsideViewBox: true,
-                          height: 40,
-                          width: 30,
-                        ),
-                        onTap: () {
-                          _authenticate();
-                        },
-                      )),
-                ],
-              )
-            ],
-          )
-        ],
+                          var request = new MultipartRequest(
+                              "POST", Uri.parse(api_url + "user/login"));
+                          request.fields['mobile'] = _controller.text;
+                          request.fields['country_code'] =
+                              _selectedDialogCountry.phoneCode;
+                          commonMethod(request).then((onResponse) {
+                            onResponse.stream
+                                .transform(utf8.decoder)
+                                .listen((value) {
+                              setState(() {
+                                _isLoading = false;
+                              });
+                              Map data = json.decode(value);
+                              presentToast(data['message'], context, 0);
+                              if (data['code'] == 200) {
+                                Navigator.of(context).push(new MaterialPageRoute(
+                                    builder: (context) => new OtpPage(
+                                        _controller.text,
+                                        _selectedDialogCountry.phoneCode)));
+                              }
+                            });
+                          });
+                        }
+                      },
+                      textColor: Colors.white,
+                      color: Color(0xff170e50),
+                      shape: new RoundedRectangleBorder(
+                          borderRadius: new BorderRadius.circular(30.0)))),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _canCheckBiometrics
+                    ? Column(
+                        children: <Widget>[
+                          Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: GestureDetector(
+                                child: new SvgPicture.asset(
+                                  "assets/imgs/bio.svg",
+                                  allowDrawingOutsideViewBox: true,
+                                  height: 40,
+                                  width: 30,
+                                ),
+                                onTap: () {
+                                  _authenticate();
+                                },
+                              )),
+                        ],
+                      )
+                    : SizedBox(),
+                Column(
+                  children: <Widget>[
+                    Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: GestureDetector(
+                          child: new SvgPicture.asset(
+                            "assets/imgs/facebook.svg",
+                            allowDrawingOutsideViewBox: true,
+                            height: 40,
+                            width: 30,
+                          ),
+                          onTap: () {
+                            _loginWithFB();
+                          },
+                        )),
+                  ],
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
     list.add(footerView);
@@ -342,30 +380,6 @@ class _LoginSate extends State<LoginPage> {
             ));
   }
 
-  Widget _telecomcell() {
-    if (telecom == 'asia') {
-      return Image.asset(
-        "assets/imgs/asia.png",
-        width: 24,
-      );
-    } else if (telecom == 'zain') {
-      return Image.asset(
-        "assets/imgs/zain.png",
-        width: 24,
-      );
-    } else if (telecom == 'korek') {
-      return Image.asset(
-        "assets/imgs/korek.png",
-        width: 24,
-      );
-    } else {
-      return Image.asset(
-        "assets/imgs/iraq.png",
-        width: 24,
-      );
-    }
-  }
-
   _displaySnackBar(msg) {
     final snackBar = new SnackBar(
       content: Text(msg),
@@ -391,9 +405,4 @@ class _LoginSate extends State<LoginPage> {
           borderRadius: new BorderRadius.circular(5.0)),
     );
   }
-}
-
-class AlwaysDisabledFocusNode extends FocusNode {
-  @override
-  bool get hasFocus => false;
 }

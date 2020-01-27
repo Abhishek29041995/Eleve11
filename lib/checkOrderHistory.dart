@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:eleve11/checkOrderHistoryDetails.dart';
 import 'package:eleve11/main.dart';
+import 'package:eleve11/modal/booking_track.dart';
 import 'package:eleve11/modal/orders.dart';
 import 'package:eleve11/services/api_services.dart';
+import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/dashed_line.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -19,6 +21,7 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
   String acccessToken = "";
   bool _isLoading = false;
   List<Orders> orderList = new List();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
 //          backgroundColor: Color(0xffFF9800),
         flexibleSpace: Container(
@@ -96,15 +100,17 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
   }
 
   CardData(Orders orderList) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => CheckOrderHistoryDetails(orderList)),
-          );
-        },
+    return InkWell(
+      onTap: () {
+        print("clicked");
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => CheckOrderHistoryDetails(orderList)),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
         child: Container(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +140,7 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                       SizedBox(
                         height: 5.0,
                       ),
-                      Text("Ordered On:"+orderList.updated_at,
+                      Text("Ordered On:" + orderList.updated_at,
                           style: TextStyle(color: Colors.black, fontSize: 11)),
                       SizedBox(height: 10.0),
                       Row(
@@ -146,9 +152,9 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                                 shape: BoxShape.circle, color: Colors.red),
                           ),
                           SizedBox(width: 5.0),
-                          Text("Booking Date:"+orderList.created_at,
+                          Text("Booking Date:" + orderList.created_at,
                               style:
-                                  TextStyle(color: Colors.black, fontSize: 11)),
+                              TextStyle(color: Colors.black, fontSize: 11)),
                         ],
                       ),
                       Padding(
@@ -168,9 +174,9 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                                 shape: BoxShape.circle, color: Colors.green),
                           ),
                           SizedBox(width: 5.0),
-                          Text("Booking Date:"+orderList.created_at,
+                          Text("Booking Date:" + orderList.created_at,
                               style:
-                                  TextStyle(color: Colors.black, fontSize: 11)),
+                              TextStyle(color: Colors.black, fontSize: 11)),
                         ],
                       ),
                     ],
@@ -180,7 +186,7 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
               Flexible(
                 child: Column(
                   children: <Widget>[
-                    Text("\$"+orderList.discounted_price,
+                    Text("\$" + orderList.discounted_price,
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 11,
@@ -189,11 +195,28 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
                         )),
                     Padding(
                       padding: EdgeInsets.all(10),
-                      child: Image(
-                          image: AssetImage('assets/user.png'),
-                          height: 35,
-                          width: 35,
-                          fit: BoxFit.fitHeight),
+                      child: new ClipRRect(
+                        borderRadius: new BorderRadius.circular(100),
+                        child: Stack(
+                          children: <Widget>[
+                            GestureDetector(
+                              onTap: () {
+//                                Navigator.push(
+//                                    context,
+//                                    new MaterialPageRoute(
+//                                        builder: (context) => new SelectService()));
+                              },
+                              child: FadeInImage.assetNetwork(
+                                placeholder: 'assets/imgs/user.png',
+                                image: orderList.worker['avatar'],
+                                fit: BoxFit.cover,
+                                height: 70,
+                                width: 70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -217,37 +240,70 @@ class _CheckOrderHistory extends State<CheckOrderHistory> {
         setState(() {
           _isLoading = false;
         });
-        Map data = json.decode(value);
-        print(data);
-        if (data['code'] == 200) {
-          List<Orders> tempList = new List();
-          if (data['data'].length > 0) {
-            for (var i = 0; i < data['data'].length; i++) {
-              tempList.add(new Orders(
-                  data['data'][i]['id'].toString(),
-                  data['data'][i]['booking_ref'],
-                  data['data'][i]['user_id'],
-                  data['data'][i]['address_id'],
-                  data['data'][i]['service_id'],
-                  data['data'][i]['actual_price'],
-                  data['data'][i]['discount_value'],
-                  data['data'][i]['discount_type'],
-                  data['data'][i]['discounted_price'],
-                  data['data'][i]['user_lat'],
-                  data['data'][i]['user_lon'],
-                  data['data'][i]['status'],
-                  data['data'][i]['created_at'],
-                  data['data'][i]['updated_at'],
-                  data['data'][i]['service'],
-                  data['data'][i]['address']));
+        try {
+          Map data = json.decode(value);
+          print(data);
+          if (data['code'] == 200) {
+            List<Orders> tempList = new List();
+            if (data['data'].length > 0) {
+              for (var i = 0; i < data['data'].length; i++) {
+                List<BookingTrack> tempBookingTrList = new List();
+                for (var j = 0;
+                    j < data['data'][i]['booking_progress'].length;
+                    j++) {
+                  tempBookingTrList.add(BookingTrack(
+                      data['data'][i]['booking_progress'][j]['id'].toString(),
+                      data['data'][i]['booking_progress'][j]['booking_id'],
+                      data['data'][i]['booking_progress'][j]['comment'],
+                      data['data'][i]['booking_progress'][j]['created_at'],
+                      data['data'][i]['booking_progress'][j]['updated_at']));
+                }
+                tempList.add(new Orders(
+                    data['data'][i]['id'].toString(),
+                    data['data'][i]['booking_ref'],
+                    data['data'][i]['user_id'],
+                    data['data'][i]['address_id'],
+                    data['data'][i]['service_id'],
+                    data['data'][i]['actual_price'],
+                    data['data'][i]['discount_value'],
+                    data['data'][i]['discount_type'],
+                    data['data'][i]['payment_type'],
+                    data['data'][i]['discounted_price'],
+                    data['data'][i]['user_lat'],
+                    data['data'][i]['user_lon'],
+                    data['data'][i]['status'],
+                    data['data'][i]['created_at'],
+                    data['data'][i]['updated_at'],
+                    data['data'][i]['service'],
+                    data['data'][i]['address'],
+                    data['data'][i]['worker'],
+                    tempBookingTrList));
+              }
+              setState(() {
+                orderList = tempList;
+              });
             }
-            setState(() {
-              orderList = tempList;
-            });
           }
+        } catch (onError) {
+          _displaySnackBar(Translations.of(context).text('server_error'));
         }
-      });
+      }).onError((err) =>
+          {_displaySnackBar(Translations.of(context).text('server_error'))});
     });
+  }
+
+  _displaySnackBar(msg) {
+    final snackBar = new SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.black,
+      action: SnackBarAction(
+        label: 'OK',
+        onPressed: () {
+          // Some code to undo the change!
+        },
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
   }
 
   List<Widget> _buildWidget() {

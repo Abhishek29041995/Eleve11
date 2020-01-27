@@ -234,20 +234,20 @@ class MapScreenState extends State<ProfilePage>
                   },
                 ),
               ),
-              (_status && userData!=null)
+              (_status && userData != null)
                   ? Center(
-                    child: new ClipRRect(
-                        borderRadius: new BorderRadius.circular(100),
-                        child: Stack(children: <Widget>[
-                          FadeInImage.assetNetwork(
-                            placeholder: 'assets/imgs/user.png',
-                            image: userData['avatar'],
-                            fit: BoxFit.cover,
-                            height: 90,
-                            width: 90,
-                          )
-                        ])),
-                  )
+                      child: new ClipRRect(
+                          borderRadius: new BorderRadius.circular(100),
+                          child: Stack(children: <Widget>[
+                            FadeInImage.assetNetwork(
+                              placeholder: 'assets/imgs/user.png',
+                              image: userData['avatar'],
+                              fit: BoxFit.cover,
+                              height: 90,
+                              width: 90,
+                            )
+                          ])),
+                    )
                   : new GestureDetector(
                       onTap: () => imagePicker.showDialog(context),
                       child: new Center(
@@ -298,21 +298,12 @@ class MapScreenState extends State<ProfilePage>
                                       ]),
                                 ),
                               )
-                            : new Container(
-                                height: 90.0,
-                                width: 90.0,
-                                decoration: new BoxDecoration(
-                                  color: const Color(0xff7c94b6),
-                                  image: new DecorationImage(
-                                    image: new ExactAssetImage(_image.path),
-                                    fit: BoxFit.cover,
-                                  ),
-                                  border:
-                                      Border.all(color: Colors.red, width: 2.0),
-                                  borderRadius: new BorderRadius.all(
-                                      const Radius.circular(80.0)),
-                                ),
-                              ),
+                            : new ClipRRect(
+                                borderRadius: new BorderRadius.circular(100),
+                                child: Stack(children: <Widget>[
+                                  Image.file(_image,
+                                      height: 90, width: 90, fit: BoxFit.cover)
+                                ])),
                       ),
                     ),
               new Container(
@@ -447,7 +438,6 @@ class MapScreenState extends State<ProfilePage>
                                   lastDate: DateTime(2100));
                             },
                           )),
-                      !_status ? _getActionButtons() : new Container(),
                     ],
                   ),
                 ),
@@ -458,6 +448,15 @@ class MapScreenState extends State<ProfilePage>
       ),
     );
     list.add(mainView);
+
+    var footerView = Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[_getActionButtons()]);
+    if (!_status) {
+      list.add(footerView);
+    }
     if (_isLoading) {
       var modal = new Stack(
         children: [

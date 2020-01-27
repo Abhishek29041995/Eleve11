@@ -3,17 +3,21 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'dart:ui' as ui;
+import 'package:eleve11/about.dart';
 import 'package:eleve11/add_location.dart';
 import 'package:eleve11/add_rides.dart';
 import 'package:eleve11/application.dart';
-import 'package:eleve11/booking_history.dart';
 import 'package:eleve11/checkOrderHistory.dart';
+import 'package:eleve11/contact_us.dart';
+import 'package:eleve11/faqs.dart';
 import 'package:eleve11/feedback.dart';
 import 'package:eleve11/login.dart';
 import 'package:eleve11/modal/Rides.dart';
 import 'package:eleve11/modal/locale.dart';
 import 'package:eleve11/modal/locations.dart';
 import 'package:eleve11/modal/service_new.dart';
+import 'package:eleve11/my_locations.dart';
+import 'package:eleve11/notifications.dart';
 import 'package:eleve11/profile_design.dart';
 import 'package:eleve11/select_service.dart';
 import 'package:eleve11/services/api_services.dart';
@@ -21,15 +25,13 @@ import 'package:eleve11/subscription.dart';
 import 'package:eleve11/utils/translations.dart';
 import 'package:eleve11/widgets/carousel_slider.dart';
 import 'package:eleve11/widgets/custom_radio.dart';
-import 'package:eleve11/offers_page.dart';
+import 'package:eleve11/promo_codes.dart';
 import 'package:eleve11/widgets/searchMapPlaceWidget.dart';
 import 'package:eleve11/widgets/user_accounts_drawer_header.dart' as prefix1;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_swiper/flutter_swiper.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -312,7 +314,7 @@ class _LandingPage extends State<LandingPage> {
                           new Icon(Icons.my_location, color: Color(0xff170e50)),
                       title: new Text(
                           Translations.of(context).text('my_locations')),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "mylocation"),
                     ),
                     new ListTile(
                       dense: true,
@@ -344,11 +346,13 @@ class _LandingPage extends State<LandingPage> {
                     new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                      leading:
-                          new Icon(Icons.subscriptions, color: Color(0xff170e50)),
-                      title: new Text(Translations.of(context).text('subscription')),
+                      leading: new Icon(Icons.subscriptions,
+                          color: Color(0xff170e50)),
+                      title: new Text(
+                          Translations.of(context).text('subscription')),
                       onTap: () => _onListTileTap(context, "subscription"),
-                    ), new ListTile(
+                    ),
+                    new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
                       leading:
@@ -363,25 +367,25 @@ class _LandingPage extends State<LandingPage> {
                           color: Color(0xff170e50)),
                       title: new Text(
                           Translations.of(context).text('notifications')),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "notify"),
                     ),
                     new Divider(),
-                    new ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
-                      leading:
-                          new Icon(Icons.settings, color: Color(0xff170e50)),
-                      title:
-                          new Text(Translations.of(context).text('settings')),
-                      onTap: () => _onListTileTap(context, ""),
-                    ),
+//                    new ListTile(
+//                      dense: true,
+//                      contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+//                      leading:
+//                          new Icon(Icons.settings, color: Color(0xff170e50)),
+//                      title:
+//                          new Text(Translations.of(context).text('settings')),
+//                      onTap: () => _onListTileTap(context, ""),
+//                    ),
                     new ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.only(left: 8.0, right: 8.0),
                       leading: new Icon(Icons.question_answer,
                           color: Color(0xff170e50)),
                       title: new Text(Translations.of(context).text('faq')),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "faq"),
                     ),
                     new ListTile(
                       dense: true,
@@ -389,20 +393,21 @@ class _LandingPage extends State<LandingPage> {
                       leading: new Icon(Icons.call, color: Color(0xff170e50)),
                       title:
                           new Text(Translations.of(context).text('contacts')),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "contactus"),
                     ),
                     new ExpansionTile(
                       leading:
                           new Icon(Icons.g_translate, color: Color(0xff170e50)),
-                      title: Text("Change Language"),
+                      title: Text(
+                          Translations.of(context).text('change_language')),
                       children: <Widget>[
                         ListTile(
                           dense: true,
                           contentPadding:
-                              EdgeInsets.only(left: 0.0, right: 0.0),
+                          EdgeInsets.only(left: MediaQuery.of(context).size.width/4, right: 0.0),
                           title: Text(
-                            "English",
-                            textAlign: TextAlign.center,
+                            Translations.of(context).text('english'),
+                            textAlign: TextAlign.left,
                           ),
                           onTap: () => {
                             Navigator.of(context).pop(),
@@ -413,10 +418,10 @@ class _LandingPage extends State<LandingPage> {
                         ListTile(
                           dense: true,
                           contentPadding:
-                              EdgeInsets.only(left: 0.0, right: 0.0),
+                          EdgeInsets.only(left: MediaQuery.of(context).size.width/4, right: 0.0),
                           title: Text(
-                            "Arabic",
-                            textAlign: TextAlign.center,
+                            Translations.of(context).text('arabic'),
+                            textAlign: TextAlign.left,
                           ),
                           onTap: () => {
                             Navigator.of(context).pop(),
@@ -427,10 +432,10 @@ class _LandingPage extends State<LandingPage> {
                         ListTile(
                           dense: true,
                           contentPadding:
-                              EdgeInsets.only(left: 0.0, right: 0.0),
+                              EdgeInsets.only(left: MediaQuery.of(context).size.width/4, right: 0.0),
                           title: Text(
-                            "Kurdish",
-                            textAlign: TextAlign.center,
+                            Translations.of(context).text('kurdish'),
+                            textAlign: TextAlign.left,
                           ),
                           onTap: () => {
                             Navigator.of(context).pop(),
@@ -449,7 +454,7 @@ class _LandingPage extends State<LandingPage> {
                       ),
                       title: new Text(
                           Translations.of(context).text('about') + ' Eleve11'),
-                      onTap: () => _onListTileTap(context, ""),
+                      onTap: () => _onListTileTap(context, "about"),
                     ),
                     new ListTile(
                       dense: true,
@@ -506,9 +511,6 @@ class _LandingPage extends State<LandingPage> {
                           }),
                 ],
               ));
-    } else if (from == "history") {
-      Navigator.push(context,
-          new MaterialPageRoute(builder: (context) => new BookingHistory()));
     } else if (from == "feedback") {
       Navigator.push(context,
           new MaterialPageRoute(builder: (context) => new FeedackPage()));
@@ -524,6 +526,21 @@ class _LandingPage extends State<LandingPage> {
     } else if (from == "promo") {
       Navigator.push(context,
           new MaterialPageRoute(builder: (context) => new OffersPage()));
+    } else if (from == "faq") {
+      Navigator.push(
+          context, new MaterialPageRoute(builder: (context) => new FAQs()));
+    } else if (from == "contactus") {
+      Navigator.push(context,
+          new MaterialPageRoute(builder: (context) => new ContactUs()));
+    } else if (from == "notify") {
+      Navigator.push(context,
+          new MaterialPageRoute(builder: (context) => new Notifications()));
+    } else if (from == "mylocation") {
+      Navigator.push(context,
+          new MaterialPageRoute(builder: (context) => new MyLocations()));
+    } else if (from == "about") {
+      Navigator.push(
+          context, new MaterialPageRoute(builder: (context) => new About()));
     } else if (from == "subscription") {
       Navigator.push(context,
           new MaterialPageRoute(builder: (context) => new SubscriptionPlans()));
